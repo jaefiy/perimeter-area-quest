@@ -13,12 +13,14 @@
     <a href="index.html" class="site-logo">
       <span>📐 Perimeter and Area Quest</span>
     </a>
+    <a href="index.html" class="btn btn-secondary nav-home-btn">⬅️ Back to home</a>
   </header>
 
   <!-- Main Container -->
-  <main class="container">
-    <div class="placeholder-card">
-      <!-- Mascot Ziggy -->
+  <main class="container lab-container">
+
+    <!-- Top Banner with Mascot Ziggy -->
+    <div class="lab-hero">
       <div class="ziggy-mascot">
         <svg viewBox="0 0 100 100" width="100%" height="100%">
           <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
@@ -31,12 +33,132 @@
           <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
         </svg>
       </div>
-
-      <h1>World 1: Shape Lab</h1>
-      <p>🧪 Coming soon! Get ready to drag and join shapes.</p>
-
-      <a href="index.html" class="btn btn-blue">⬅️ Back to home</a>
+      <div class="lab-hero-text">
+        <h1 class="lab-title">World 1: Shape Lab</h1>
+        <p class="ziggy-tip" id="ziggy-tip">🌟 Ziggy says: "Try a pentagon and a hexagon with the same side!"</p>
+      </div>
     </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="lab-tabs" aria-label="Lab Modes">
+      <button class="tab-btn tab-blue active" id="tab-1-btn" data-tab="tab-1">1. Build and Discover</button>
+      <button class="tab-btn tab-purple" id="tab-2-btn" data-tab="tab-2">2. Mission Time</button>
+      <button class="tab-btn tab-orange" id="tab-3-btn" data-tab="tab-3">3. Split It!</button>
+    </nav>
+
+    <!-- Tab 1 Content -->
+    <section id="tab-1" class="tab-content active">
+      <!-- Notification / Alert Message Box -->
+      <div id="lab-toast" class="lab-toast hidden" aria-live="polite"></div>
+
+      <div class="lab-workspace">
+
+        <!-- Shape Tray (Left / Top on mobile) -->
+        <aside class="shape-tray" aria-label="Shape Tray">
+          <h2 class="tray-title">🧰 Shape Tray</h2>
+
+          <!-- Group 1: Regular Shapes -->
+          <div class="tray-group">
+            <h3 class="tray-group-title">1. Regular shapes</h3>
+            <div class="selector-row">
+              <label for="side-length-select"><strong>Side length:</strong></label>
+              <select id="side-length-select" class="side-select">
+                <option value="3">3 cm</option>
+                <option value="4" selected>4 cm</option>
+                <option value="5">5 cm</option>
+                <option value="6">6 cm</option>
+                <option value="8">8 cm</option>
+              </select>
+            </div>
+            <p class="tray-tip">Join shapes with the same side length.</p>
+            <div class="tray-items-grid" id="regular-shapes-grid"></div>
+          </div>
+
+          <!-- Group 2: Rectangles -->
+          <div class="tray-group">
+            <h3 class="tray-group-title">2. Rectangles</h3>
+            <div class="tray-items-grid" id="rectangles-grid"></div>
+          </div>
+
+          <!-- Group 3: Triangles -->
+          <div class="tray-group">
+            <h3 class="tray-group-title">3. Triangles</h3>
+            <div class="tray-items-grid" id="triangles-grid"></div>
+          </div>
+        </aside>
+
+        <!-- Play Area (Centre) -->
+        <main class="play-area-wrapper">
+          <div class="play-area-header">
+            <span class="scale-label">📐 1 square = 1 cm</span>
+            <div class="play-area-controls">
+              <button id="btn-reset" class="btn btn-secondary btn-sm">🔄 Reset Workspace</button>
+            </div>
+          </div>
+
+          <div id="play-area-container" class="play-area-container">
+            <svg id="play-area-svg" class="play-area-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <!-- 0.5 cm grid pattern (20px per cm, 10px per 0.5 cm) -->
+                <pattern id="grid-sub" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.5" />
+                </pattern>
+                <pattern id="grid-main" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <rect width="20" height="20" fill="url(#grid-sub)" />
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#b0bec5" stroke-width="1" />
+                </pattern>
+              </defs>
+              <!-- Grid background -->
+              <rect width="100%" height="100%" fill="url(#grid-main)" />
+
+              <!-- Joined / Shared overlay layer -->
+              <g id="svg-overlay-layer"></g>
+
+              <!-- Placed shapes layer -->
+              <g id="svg-shapes-layer"></g>
+
+              <!-- Controls / Labels overlay layer -->
+              <g id="svg-controls-layer"></g>
+            </svg>
+            <div id="sparkle-container" class="sparkle-container"></div>
+          </div>
+        </main>
+
+        <!-- Info Panel (Right / Bottom on mobile) -->
+        <aside class="info-panel" aria-label="Info Panel">
+          <h2 class="info-title">📊 Shape Info</h2>
+
+          <div id="info-content">
+            <div class="info-empty-card">
+              <p> Drag or tap 2 shapes to join them together so they touch along a side.</p>
+            </div>
+          </div>
+
+          <div class="info-actions">
+            <button id="btn-show-shared" class="btn btn-secondary btn-full" disabled>🔴 Show shared side</button>
+            <button id="btn-show-outer" class="btn btn-secondary btn-full" disabled>🔵 Show outer sides</button>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- Tab 2 Content (Coming Soon) -->
+    <section id="tab-2" class="tab-content hidden">
+      <div class="coming-soon-card">
+        <h2>🎯 2. Mission Time</h2>
+        <p>Coming soon! Complete timed challenges and test your perimeter & area skills.</p>
+      </div>
+    </section>
+
+    <!-- Tab 3 Content (Coming Soon) -->
+    <section id="tab-3" class="tab-content hidden">
+      <div class="coming-soon-card">
+        <h2>✂️ 3. Split It!</h2>
+        <p>Coming soon! Learn how to decompose complex composite shapes into simpler shapes.</p>
+      </div>
+    </section>
+
   </main>
 
   <!-- Footer -->
@@ -44,5 +166,8 @@
     <p>Aligned with KSSR Year 5 Mathematics 6.3.1 and 6.3.2</p>
   </footer>
 
+  <script src="js/mathcore.js"></script>
+  <script src="js/labcore.js"></script>
+  <script src="js/lab.js"></script>
 </body>
 </html>

@@ -176,12 +176,59 @@
     return bestCandidate;
   }
 
+  function findFreePosition(shape, otherShape, area) {
+    if (!area) area = { width: 30, height: 25 };
+    const areaW = area.width || 30;
+    const areaH = area.height || 25;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    shape.vertices.forEach(v => {
+      if (v.x < minX) minX = v.x;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    });
+
+    const w = maxX - minX;
+    const h = maxY - minY;
+
+    const maxYScan = Math.floor(areaH - h);
+    const maxXScan = Math.floor(areaW - w);
+
+    for (let y = 0; y <= maxYScan; y += 1) {
+      for (let x = 0; x <= maxXScan; x += 1) {
+        const dx = x - minX;
+        const dy = y - minY;
+        const candidate = translateShape(shape, dx, dy);
+
+        let inBounds = true;
+        for (let i = 0; i < candidate.vertices.length; i++) {
+          const vx = candidate.vertices[i].x;
+          const vy = candidate.vertices[i].y;
+          if (vx < -1e-6 || vx > areaW + 1e-6 || vy < -1e-6 || vy > areaH + 1e-6) {
+            inBounds = false;
+            break;
+          }
+        }
+
+        if (!inBounds) continue;
+
+        if (!otherShape || !MathCore.shapesOverlap(candidate, otherShape)) {
+          return { x: x, y: y };
+        }
+      }
+    }
+
+    return null;
+  }
+
   return {
     snapToGrid: snapToGrid,
     translateShape: translateShape,
     rotateShape: rotateShape,
     rotateShape90: rotateShape90,
     flipShape: flipShape,
-    findEdgeSnap: findEdgeSnap
+    findEdgeSnap: findEdgeSnap,
+    findFreePosition: findFreePosition
   };
 }));

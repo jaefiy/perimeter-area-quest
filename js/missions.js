@@ -223,10 +223,39 @@
     return { success: false, message: 'Not quite right. Try again or check your working!' };
   }
 
+  function checkAnswer(mission, typedText) {
+    if (typedText === null || typedText === undefined || typedText.toString().trim() === '') {
+      return { status: 'empty', message: 'Type a number first.' };
+    }
+
+    const num = parseInputNumber(typedText);
+    if (isNaN(num)) {
+      return { status: 'invalid', message: 'Type a number first.' };
+    }
+
+    const expected = mission.computedAnswer !== undefined ? mission.computedAnswer : (
+      mission.type === 'perimeter'
+        ? MathCore.compositePerimeter(mission.createShapes().s1, mission.createShapes().s2)
+        : MathCore.compositeArea(mission.createShapes().s1, mission.createShapes().s2)
+    );
+
+    if (Math.abs(num - expected) < 1e-4) {
+      return { status: 'correct', message: 'Correct!' };
+    }
+
+    const mistake = mission.mistakes && mission.mistakes[num];
+    if (mistake) {
+      return { status: 'wrong', message: mistake, note: mistake };
+    }
+
+    return { status: 'wrong', message: 'Not quite! Try again.' };
+  }
+
   return {
     missionsList: missionsList,
     getMission: getMission,
     parseInputNumber: parseInputNumber,
-    checkMissionAnswer: checkMissionAnswer
+    checkMissionAnswer: checkMissionAnswer,
+    checkAnswer: checkAnswer
   };
 }));

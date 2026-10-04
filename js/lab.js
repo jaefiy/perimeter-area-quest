@@ -293,13 +293,24 @@
       return;
     }
 
-    const offsetX = placedShapes.length === 0 ? 4 : 14;
-    const offsetY = 6;
-    const initialShape = LabCore.translateShape(rawShape, offsetX, offsetY);
+    const otherShape = placedShapes.length === 1 ? placedShapes[0].shape : null;
+    const pos = LabCore.findFreePosition(rawShape, otherShape, { width: 30, height: 25 });
+    if (!pos) {
+      showToast('No space available in play area!');
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity;
+    rawShape.vertices.forEach(v => {
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+    });
+
+    const initialShape = LabCore.translateShape(rawShape, pos.x - minX, pos.y - minY);
 
     let finalShape = initialShape;
-    if (placedShapes.length === 1) {
-      const snapped = LabCore.findEdgeSnap(initialShape, placedShapes[0].shape, 8.0);
+    if (otherShape) {
+      const snapped = LabCore.findEdgeSnap(initialShape, otherShape, 8.0);
       if (snapped) {
         finalShape = snapped;
         triggerSparkle();
@@ -910,6 +921,17 @@
     mTrianglesGrid.appendChild(createTrayItemSVG(tri2, 'isosceles 6x5x5 cm', 'h = 4 cm', addShapeToMissionPlayArea));
   }
 
+  function handleCheckClick() {
+    checkCurrentMission();
+  }
+
+  function handleInputKeydown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      checkCurrentMission();
+    }
+  }
+
   function loadMission(index) {
     if (!window.Missions) return;
 
@@ -917,6 +939,9 @@
       showMissionFinalScreen();
       return;
     }
+
+    if (mActiveContainer) mActiveContainer.classList.remove('hidden');
+    if (mFinalScreen) mFinalScreen.classList.add('hidden');
 
     currentMissionIndex = index;
     mAttemptCount = 0;
@@ -937,6 +962,13 @@
     if (mAnswerInput) {
       mAnswerInput.value = '';
       mAnswerInput.disabled = false;
+      mAnswerInput.removeEventListener('keydown', handleInputKeydown);
+      mAnswerInput.addEventListener('keydown', handleInputKeydown);
+    }
+
+    if (mBtnCheck) {
+      mBtnCheck.removeEventListener('click', handleCheckClick);
+      mBtnCheck.addEventListener('click', handleCheckClick);
     }
 
     if (mHintBox) {
@@ -974,13 +1006,24 @@
       return;
     }
 
-    const offsetX = missionPlacedShapes.length === 0 ? 4 : 14;
-    const offsetY = 6;
-    const initialShape = LabCore.translateShape(rawShape, offsetX, offsetY);
+    const otherShape = missionPlacedShapes.length === 1 ? missionPlacedShapes[0].shape : null;
+    const pos = LabCore.findFreePosition(rawShape, otherShape, { width: 30, height: 25 });
+    if (!pos) {
+      showToast('No space available in play area!', mToastEl);
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity;
+    rawShape.vertices.forEach(v => {
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+    });
+
+    const initialShape = LabCore.translateShape(rawShape, pos.x - minX, pos.y - minY);
 
     let finalShape = initialShape;
-    if (missionPlacedShapes.length === 1) {
-      const snapped = LabCore.findEdgeSnap(initialShape, missionPlacedShapes[0].shape, 8.0);
+    if (otherShape) {
+      const snapped = LabCore.findEdgeSnap(initialShape, otherShape, 8.0);
       if (snapped) {
         finalShape = snapped;
         triggerSparkle(mSparkleContainer);
@@ -1245,9 +1288,10 @@
 
     if (mBtnRestart) {
       mBtnRestart.addEventListener('click', () => {
-        mMissionStars = [3, 3, 3, 3, 3, 3, 3, 3];
-        mFinalScreen.classList.add('hidden');
-        mActiveContainer.classList.remove('hidden');
+        currentMissionIndex = 0;
+        mMissionStars = [0, 0, 0, 0, 0, 0, 0, 0];
+        if (mFinalScreen) mFinalScreen.classList.add('hidden');
+        if (mActiveContainer) mActiveContainer.classList.remove('hidden');
         loadMission(0);
       });
     }
@@ -1259,17 +1303,47 @@
     const mission = Missions.getMission(Missions.missionsList[currentMissionIndex].id);
     const userInput = mAnswerInput ? mAnswerInput.value : '';
 
-    const res = Missions.checkMissionAnswer(mission.id, missionPlacedShapes, userInput);
-
-    if (res.builtError) {
-      showToast(res.message, mToastEl);
+    // 1. Check if typed answer is empty or invalid
+    const answerCheck = Missions.checkAnswer(mission, userInput);
+    if (answerCheck.status === 'empty' || answerCheck.status === 'invalid') {
+      if (mFeedbackBox) {
+        mFeedbackBox.textContent = `⚠️ Type a number first.`;
+        mFeedbackBox.className = 'm-feedback-box incorrect';
+        mFeedbackBox.classList.remove('hidden');
+        mFeedbackBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
       return;
     }
 
+    // 2. Check if two required shapes are built and joined
+    if (!missionPlacedShapes || missionPlacedShapes.length < 2) {
+      if (mFeedbackBox) {
+        mFeedbackBox.textContent = `⚠️ Build the shape first! Join the two shapes.`;
+        mFeedbackBox.className = 'm-feedback-box incorrect';
+        mFeedbackBox.classList.remove('hidden');
+        mFeedbackBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    const sA = missionPlacedShapes[0].shape || missionPlacedShapes[0];
+    const sB = missionPlacedShapes[1].shape || missionPlacedShapes[1];
+    const shared = MathCore.sharedLength(sA, sB);
+
+    if (shared <= 0) {
+      if (mFeedbackBox) {
+        mFeedbackBox.textContent = `⚠️ Build the shape first! Join the two shapes.`;
+        mFeedbackBox.className = 'm-feedback-box incorrect';
+        mFeedbackBox.classList.remove('hidden');
+        mFeedbackBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    // 3. Process answer result
     mAttemptCount++;
 
-    if (res.success) {
-      // Calculate stars based on attempts and hint
+    if (answerCheck.status === 'correct') {
       let stars = 3;
       if (mUsedHint || mAttemptCount === 2) {
         stars = 2;
@@ -1283,34 +1357,46 @@
       triggerConfetti();
 
       if (mFeedbackBox) {
-        mFeedbackBox.textContent = `🎉 Ziggy says: "${res.message}"`;
+        mFeedbackBox.innerHTML = '';
+        const msgSpan = document.createElement('span');
+        msgSpan.textContent = `🎉 Correct! Awesome job! `;
+        mFeedbackBox.appendChild(msgSpan);
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn btn-primary btn-sm';
+        nextBtn.style.marginLeft = '10px';
+        nextBtn.textContent = currentMissionIndex + 1 < Missions.missionsList.length ? 'Next Mission ➡️' : 'See Results 🏆';
+        nextBtn.addEventListener('click', () => {
+          if (currentMissionIndex + 1 < Missions.missionsList.length) {
+            loadMission(currentMissionIndex + 1);
+          } else {
+            showMissionFinalScreen();
+          }
+        });
+        mFeedbackBox.appendChild(nextBtn);
+
         mFeedbackBox.className = 'm-feedback-box correct';
         mFeedbackBox.classList.remove('hidden');
+        mFeedbackBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
 
       if (mAnswerInput) mAnswerInput.disabled = true;
 
-      setTimeout(() => {
-        if (currentMissionIndex + 1 < Missions.missionsList.length) {
-          loadMission(currentMissionIndex + 1);
-        } else {
-          showMissionFinalScreen();
-        }
-      }, 1800);
-
     } else {
-      // Wrong answer logic
+      // Wrong answer
       if (mAttemptCount === 1) {
-        mCurrentStars = mUsedHint ? 2 : 2;
+        mCurrentStars = 2;
       } else if (mAttemptCount >= 2) {
         mCurrentStars = 1;
       }
       updateCurrentMissionStarsDisplay();
 
       if (mFeedbackBox) {
-        mFeedbackBox.textContent = `❌ ${res.message}`;
+        const mistakeMsg = answerCheck.note ? `Not quite. ${answerCheck.note}` : `Not quite. Try again!`;
+        mFeedbackBox.textContent = `❌ ${mistakeMsg}`;
         mFeedbackBox.className = 'm-feedback-box incorrect';
         mFeedbackBox.classList.remove('hidden');
+        mFeedbackBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
   }
@@ -1355,6 +1441,9 @@
       showSplitFinalScreen();
       return;
     }
+
+    if (sActiveContainer) sActiveContainer.classList.remove('hidden');
+    if (sFinalScreen) sFinalScreen.classList.add('hidden');
 
     currentSplitIndex = index;
     splitCardMatched = false;
@@ -1496,9 +1585,10 @@
 
     if (sBtnRestart) {
       sBtnRestart.addEventListener('click', () => {
+        currentSplitIndex = 0;
         splitPoints = 0;
-        sFinalScreen.classList.add('hidden');
-        sActiveContainer.classList.remove('hidden');
+        if (sFinalScreen) sFinalScreen.classList.add('hidden');
+        if (sActiveContainer) sActiveContainer.classList.remove('hidden');
         loadSplitComposite(0);
       });
     }

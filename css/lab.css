@@ -75,6 +75,12 @@ body.lab-page .tab-content {
   display: block;
 }
 
+body.lab-page .hidden,
+body.lab-page [hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 body.lab-page .tab-content.hidden {
   display: none !important;
 }

@@ -493,6 +493,365 @@ body {
   margin-bottom: 24px;
 }
 
+/* Shape Lab Specific Styles */
+
+/* Navigation Tabs */
+.tab-navigation {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 220px;
+  min-height: 52px;
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  opacity: 0.8;
+}
+
+.tab-btn:hover, .tab-btn:focus {
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.tab-btn.active {
+  opacity: 1;
+  transform: translateY(0);
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.3);
+  outline: 4px solid #ffeb3b;
+}
+
+.tab-blue { background-color: var(--blue-card); }
+.tab-purple { background-color: var(--purple-card); }
+.tab-orange { background-color: var(--orange-card); }
+
+/* Tab Content Areas */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Coming Soon Card for Tabs 2 & 3 */
+.coming-soon-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  box-shadow: var(--card-shadow);
+  max-width: 600px;
+  margin: 32px auto;
+}
+
+.coming-soon-card h2 {
+  font-size: 2rem;
+  color: #0d47a1;
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.coming-soon-card p {
+  font-size: 1.2rem;
+  color: #555555;
+  font-weight: 600;
+}
+
+/* Tab 1 Layout: Tray | Play Area | Info Panel */
+.lab-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 900px) {
+  .lab-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr 300px;
+    align-items: start;
+  }
+}
+
+/* Shape Tray */
+.shape-tray-panel {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+}
+
+.tray-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0d47a1;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.tray-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.tray-item {
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: var(--radius-md);
+  padding: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90px;
+  min-height: 90px;
+  user-select: none;
+}
+
+.tray-item:hover, .tray-item:focus {
+  transform: scale(1.05);
+  border-color: #0288d1;
+}
+
+.tray-item svg {
+  max-width: 70px;
+  max-height: 60px;
+}
+
+.tray-item-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #333333;
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* SVG Play Area Container */
+.play-area-container {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.scale-badge {
+  background: #fffde7;
+  border: 2px solid #fbc02d;
+  color: #f57f17;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.play-area-svg-wrapper {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  touch-action: none; /* AGENTS.md requirement: touch-action: none so page does not scroll while dragging */
+}
+
+.play-area-svg {
+  width: 100%;
+  height: 100%;
+  background: #fafafa;
+  border: 3px solid #0288d1;
+  border-radius: var(--radius-md);
+  touch-action: none;
+  user-select: none;
+}
+
+/* Red flash effect on overlap */
+.play-area-svg.flash-red {
+  animation: redFlashAnim 0.4s ease;
+}
+
+@keyframes redFlashAnim {
+  0%, 100% { border-color: #0288d1; background: #fafafa; }
+  50% { border-color: #d32f2f; background: #ffebee; }
+}
+
+/* Pop & Sparkle Animation when shapes join */
+@keyframes popSparkle {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.pop-sparkle-anim {
+  animation: popSparkle 0.3s ease-out;
+}
+
+/* Info Panel */
+.info-panel {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+.info-card-blue {
+  background-color: var(--blue-bg);
+  border-left: 6px solid var(--blue-perimeter);
+  color: var(--blue-perimeter);
+}
+
+.info-card-green {
+  background-color: var(--green-bg);
+  border-left: 6px solid var(--green-area);
+  color: var(--green-area);
+}
+
+.info-card-yellow {
+  background-color: var(--yellow-bg);
+  border-left: 6px solid var(--yellow-star);
+  color: #f57f17;
+}
+
+.info-card-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-card-formula {
+  font-size: 0.95rem;
+  font-weight: 700;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.info-card-working {
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.info-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-toggle {
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-toggle-red {
+  background-color: #ffebee;
+  border-color: var(--red-shared);
+  color: var(--red-shared);
+}
+
+.btn-toggle-red.active {
+  background-color: var(--red-shared);
+  color: #ffffff;
+}
+
+.btn-toggle-blue {
+  background-color: var(--blue-bg);
+  border-color: var(--blue-perimeter);
+  color: var(--blue-perimeter);
+}
+
+.btn-toggle-blue.active {
+  background-color: var(--blue-perimeter);
+  color: #ffffff;
+}
+
+.btn-reset {
+  background-color: #eceff1;
+  border: 2px solid #78909c;
+  color: #37474f;
+  min-height: 48px;
+  font-weight: 800;
+}
+
+.btn-reset:hover {
+  background-color: #cfd8dc;
+}
+
+/* Toast Notification / Ziggy Tip */
+.toast-msg {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #323232;
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  z-index: 2000;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast-msg.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Controls overlay on SVG shape */
+.shape-control-btn {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.shape-control-btn:hover {
+  transform: scale(1.15);
+}
+
 /* Accessibility Focus Outline */
 a:focus, button:focus {
   outline: 3px solid #ff6f00;

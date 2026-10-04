@@ -13,36 +13,170 @@
     <a href="index.html" class="site-logo">
       <span>📐 Perimeter and Area Quest</span>
     </a>
+    <a href="index.html" class="btn btn-secondary" style="min-height:44px; padding:8px 16px;">⬅️ Back to home</a>
   </header>
 
   <!-- Main Container -->
   <main class="container">
-    <div class="placeholder-card">
-      <!-- Mascot Ziggy -->
-      <div class="ziggy-mascot">
-        <svg viewBox="0 0 100 100" width="100%" height="100%">
-          <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
-          <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
-          <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
-          <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
-          <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
-          <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
-          <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
-          <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
-        </svg>
+
+    <!-- Header / Mascot Section -->
+    <section class="hero" style="padding: 20px 16px; margin-bottom: 20px;">
+      <div class="hero-content">
+        <div class="ziggy-mascot" style="width: 80px; height: 80px; margin: 0 auto 8px auto;">
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
+            <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
+            <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
+            <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h1 class="hero-title" style="font-size: 2rem; margin-bottom: 4px;">World 1: Shape Lab</h1>
+        <p id="ziggy-speech" class="hero-tagline" style="font-size: 1.1rem; margin-bottom: 0;">Try joining two squares!</p>
       </div>
+    </section>
 
-      <h1>World 1: Shape Lab</h1>
-      <p>🧪 Coming soon! Get ready to drag and join shapes.</p>
+    <!-- Navigation Tabs -->
+    <nav class="tab-navigation" aria-label="World 1 Modes">
+      <button id="tab-1-btn" class="tab-btn tab-blue active" onclick="switchTab(1)">1. Build and Discover</button>
+      <button id="tab-2-btn" class="tab-btn tab-purple" onclick="switchTab(2)">2. Mission Time</button>
+      <button id="tab-3-btn" class="tab-btn tab-orange" onclick="switchTab(3)">3. Split It!</button>
+    </nav>
 
-      <a href="index.html" class="btn btn-blue">⬅️ Back to home</a>
-    </div>
+    <!-- Tab 1: Build and Discover -->
+    <section id="tab-1-content" class="tab-content active">
+      <div class="lab-layout">
+
+        <!-- Shape Tray -->
+        <aside class="shape-tray-panel">
+          <h2 class="tray-title">📦 Shape Tray</h2>
+          <div class="tray-scroll" id="shape-tray">
+            <!-- Tray items dynamically generated or static HTML -->
+          </div>
+        </aside>
+
+        <!-- Play Area -->
+        <div class="play-area-container">
+          <div class="scale-badge">📏 1 square = 1 cm</div>
+          <div class="play-area-svg-wrapper">
+            <svg id="play-area-svg" class="play-area-svg" viewBox="0 0 20 20">
+              <!-- SVG Grid pattern and grid lines -->
+              <defs>
+                <pattern id="grid-pattern" width="1" height="1" patternUnits="userSpaceOnUse">
+                  <path d="M 1 0 L 0 0 0 1" fill="none" stroke="#e0e0e0" stroke-width="0.05" />
+                </pattern>
+              </defs>
+              <rect width="20" height="20" fill="url(#grid-pattern)" />
+
+              <!-- Group for rendered placed shapes -->
+              <g id="placed-shapes-group"></g>
+
+              <!-- Group for overlay highlights (shared side / outer boundary) -->
+              <g id="overlay-highlights-group"></g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Info Panel -->
+        <aside class="info-panel">
+
+          <!-- Hint State / Calculation Cards -->
+          <div id="info-content">
+            <!-- Default Hint -->
+            <div id="hint-card" class="info-card info-card-yellow">
+              <div class="info-card-title">💡 Hint</div>
+              <p>Drag two shapes together so they touch along a side!</p>
+            </div>
+
+            <!-- Perimeter Live Calculation Card -->
+            <div id="perimeter-card" class="info-card info-card-blue" style="display:none;">
+              <div class="info-card-title">📏 Perimeter</div>
+              <div class="info-card-formula">P1 + P2 - 2 x shared side</div>
+              <div id="perimeter-working" class="info-card-working">12 + 14 - 2 x 4 = 18 cm</div>
+            </div>
+
+            <!-- Area Live Calculation Card -->
+            <div id="area-card" class="info-card info-card-green" style="display:none; margin-top:12px;">
+              <div class="info-card-title">🟩 Area</div>
+              <div class="info-card-formula">A1 + A2 = total</div>
+              <div id="area-working" class="info-card-working">16 + 16 = 32 cm²</div>
+            </div>
+          </div>
+
+          <!-- Toggles & Actions -->
+          <div class="info-actions">
+            <button id="toggle-shared-btn" class="btn-toggle btn-toggle-red">
+              <span>🔍 Show shared side</span>
+            </button>
+            <button id="toggle-outer-btn" class="btn-toggle btn-toggle-blue">
+              <span>📐 Show outer sides</span>
+            </button>
+            <button id="reset-btn" class="btn btn-reset">
+              <span>🔄 Reset Play Area</span>
+            </button>
+          </div>
+
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- Tab 2: Mission Time (Coming Soon) -->
+    <section id="tab-2-content" class="tab-content">
+      <div class="coming-soon-card">
+        <div class="ziggy-mascot" style="width: 100px; height: 100px;">
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
+            <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
+            <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
+            <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h2>2. Mission Time</h2>
+        <p>🎯 Coming soon! Get ready for exciting time missions with Ziggy!</p>
+      </div>
+    </section>
+
+    <!-- Tab 3: Split It! (Coming Soon) -->
+    <section id="tab-3-content" class="tab-content">
+      <div class="coming-soon-card">
+        <div class="ziggy-mascot" style="width: 100px; height: 100px;">
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
+            <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
+            <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
+            <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h2>3. Split It!</h2>
+        <p>✂️ Coming soon! Learn to break complex shapes down into simple ones!</p>
+      </div>
+    </section>
+
   </main>
+
+  <!-- Toast Message Alert -->
+  <div id="toast" class="toast-msg" role="alert" aria-live="assertive"></div>
 
   <!-- Footer -->
   <footer class="site-footer">
     <p>Aligned with KSSR Year 5 Mathematics 6.3.1 and 6.3.2</p>
   </footer>
 
+  <!-- Core Scripts -->
+  <script src="js/mathcore.js"></script>
+  <script src="js/labcore.js"></script>
+  <script src="js/lab.js"></script>
 </body>
 </html>

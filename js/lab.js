@@ -288,42 +288,17 @@
   }
 
   function addShapeToPlayArea(rawShape, label) {
-    if (placedShapes.length >= 2) {
+    const res = LabCore.addShapeToPlay(placedShapes, rawShape, { width: 30, height: 25 }, label);
+    if (res && res.error === 'max-two') {
       showToast('Only two shapes at a time! Remove one first.');
       return;
     }
-
-    const otherShape = placedShapes.length === 1 ? placedShapes[0].shape : null;
-    const pos = LabCore.findFreePosition(rawShape, otherShape, { width: 30, height: 25 });
-    if (!pos) {
+    if (res && res.error === 'no-space') {
       showToast('No space available in play area!');
       return;
     }
 
-    let minX = Infinity, minY = Infinity;
-    rawShape.vertices.forEach(v => {
-      if (v.x < minX) minX = v.x;
-      if (v.y < minY) minY = v.y;
-    });
-
-    const initialShape = LabCore.translateShape(rawShape, pos.x - minX, pos.y - minY);
-
-    let finalShape = initialShape;
-    if (otherShape) {
-      const snapped = LabCore.findEdgeSnap(initialShape, otherShape, 8.0);
-      if (snapped) {
-        finalShape = snapped;
-        triggerSparkle();
-      }
-    }
-
-    const shapeObj = {
-      id: nextShapeId++,
-      shape: finalShape,
-      label: label
-    };
-
-    placedShapes.push(shapeObj);
+    placedShapes = res;
     renderPlayArea();
     updateInfoPanel();
   }
@@ -1001,42 +976,17 @@
   }
 
   function addShapeToMissionPlayArea(rawShape, label) {
-    if (missionPlacedShapes.length >= 2) {
+    const res = LabCore.addShapeToPlay(missionPlacedShapes, rawShape, { width: 30, height: 25 }, label);
+    if (res && res.error === 'max-two') {
       showToast('Only two shapes at a time! Remove one first.', mToastEl);
       return;
     }
-
-    const otherShape = missionPlacedShapes.length === 1 ? missionPlacedShapes[0].shape : null;
-    const pos = LabCore.findFreePosition(rawShape, otherShape, { width: 30, height: 25 });
-    if (!pos) {
+    if (res && res.error === 'no-space') {
       showToast('No space available in play area!', mToastEl);
       return;
     }
 
-    let minX = Infinity, minY = Infinity;
-    rawShape.vertices.forEach(v => {
-      if (v.x < minX) minX = v.x;
-      if (v.y < minY) minY = v.y;
-    });
-
-    const initialShape = LabCore.translateShape(rawShape, pos.x - minX, pos.y - minY);
-
-    let finalShape = initialShape;
-    if (otherShape) {
-      const snapped = LabCore.findEdgeSnap(initialShape, otherShape, 8.0);
-      if (snapped) {
-        finalShape = snapped;
-        triggerSparkle(mSparkleContainer);
-      }
-    }
-
-    const shapeObj = {
-      id: mNextShapeId++,
-      shape: finalShape,
-      label: label
-    };
-
-    missionPlacedShapes.push(shapeObj);
+    missionPlacedShapes = res;
     renderMissionPlayArea();
   }
 

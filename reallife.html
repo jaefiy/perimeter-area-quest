@@ -5,44 +5,290 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>World 3: Real-Life Builder - Perimeter and Area Quest</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/reallife.css">
 </head>
-<body>
+<body class="reallife-page">
+
+  <!-- Confetti Canvas Overlay -->
+  <canvas id="confetti-canvas" class="confetti-canvas hidden" aria-hidden="true"></canvas>
 
   <!-- Header -->
   <header class="site-header">
     <a href="index.html" class="site-logo">
       <span>📐 Perimeter and Area Quest</span>
     </a>
+    <button id="open-how-to-play" class="btn btn-secondary">❓ How to Play</button>
   </header>
 
   <!-- Main Container -->
   <main class="container">
-    <div class="placeholder-card">
-      <!-- Mascot Ziggy -->
-      <div class="ziggy-mascot">
-        <svg viewBox="0 0 100 100" width="100%" height="100%">
-          <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
-          <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
-          <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
-          <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
-          <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
-          <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
-          <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
-          <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
-        </svg>
+
+    <!-- SCENARIO SELECTION VIEW (Home of Page) -->
+    <section id="scenario-select-view" class="scenario-select-section">
+      <!-- Hero / Mascot Banner -->
+      <div class="hero-content" style="text-align: center; margin-bottom: 24px;">
+        <div class="ziggy-mascot" style="width: 80px; height: 80px; margin: 0 auto 12px auto;">
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="#ffd54f" stroke="#f57f17" stroke-width="3" stroke-linejoin="round" />
+            <ellipse cx="36" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <ellipse cx="64" cy="52" rx="5" ry="3" fill="#ff8a80" opacity="0.8" />
+            <circle cx="38" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="62" cy="45" r="4" fill="#1a1a1a" />
+            <circle cx="40" cy="43" r="1.5" fill="#ffffff" />
+            <circle cx="64" cy="43" r="1.5" fill="#ffffff" />
+            <path d="M 40 56 Q 50 66 60 56" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h1 style="font-size: 2rem; color: #1a1a1a; margin-bottom: 8px;">🏗️ Real-Life Builder</h1>
+        <p style="color: #555555; font-size: 1.1rem;">Help our clients design projects and stay within budget!</p>
       </div>
 
-      <h1>World 3: Real-Life Builder</h1>
-      <p>🏗️ Coming soon! Build gardens and stay on budget.</p>
+      <!-- Scenario Cards Grid -->
+      <div class="scenario-cards-grid">
+        <!-- Scenario 1 Card -->
+        <article class="scenario-card" id="card-scenario-1">
+          <div>
+            <h2 class="scenario-title">🏡 1. School Garden</h2>
+            <p class="scenario-desc">Pick two shapes and join them. Keep fence and grass in budget!</p>
+          </div>
+          <div class="scenario-footer">
+            <div class="star-rating" id="stars-scenario-1" aria-label="Stars for Scenario 1"></div>
+            <button class="btn btn-primary start-scenario-btn" data-scenario="1">Start Design</button>
+          </div>
+        </article>
 
-      <a href="index.html" class="btn btn-orange">⬅️ Back to home</a>
-    </div>
+        <!-- Scenario 2 Card -->
+        <article class="scenario-card" id="card-scenario-2">
+          <div>
+            <h2 class="scenario-title">🏫 2. Classroom Floor</h2>
+            <p class="scenario-desc">Calculate tile and skirting costs step-by-step for Cikgu Lee.</p>
+          </div>
+          <div class="scenario-footer">
+            <div class="star-rating" id="stars-scenario-2" aria-label="Stars for Scenario 2"></div>
+            <button class="btn btn-primary start-scenario-btn" data-scenario="2">Start Project</button>
+          </div>
+        </article>
+
+        <!-- Scenario 3 Card -->
+        <article class="scenario-card" id="card-scenario-3">
+          <div>
+            <h2 class="scenario-title">🛝 3. Playground Mat</h2>
+            <p class="scenario-desc">Cover the playground with a mat and fence for Encik Rahman.</p>
+          </div>
+          <div class="scenario-footer">
+            <div class="star-rating" id="stars-scenario-3" aria-label="Stars for Scenario 3"></div>
+            <button class="btn btn-primary start-scenario-btn" data-scenario="3">Start Project</button>
+          </div>
+        </article>
+      </div>
+
+      <div style="margin-top: 32px; text-align: center;">
+        <a href="index.html" class="btn btn-orange" style="min-height: 48px; display: inline-flex; align-items: center; justify-content: center;">⬅️ Back to home</a>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE SCENARIO WORKSPACE VIEW -->
+    <section id="scenario-workspace-view" class="scenario-workspace-section hidden" hidden>
+      <!-- Navigation Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <button id="back-to-scenarios-btn" class="btn btn-secondary">⬅️ Back to Scenarios</button>
+        <h2 id="workspace-title" style="font-size: 1.5rem; margin: 0; color: #1a1a1a;">Scenario Workspace</h2>
+      </div>
+
+      <!-- Client Banner -->
+      <div class="client-banner">
+        <div class="client-avatar">👤</div>
+        <div>
+          <div id="client-name-tag" style="font-weight: 700; color: #f57f17; font-size: 1.1rem;">Client Name</div>
+          <div id="client-prompt-text" class="client-prompt">Client prompt description goes here.</div>
+        </div>
+      </div>
+
+      <!-- Step Progress Dots (for Scenario 2 & 3) -->
+      <div id="progress-dots-container" class="progress-dots-container hidden" hidden></div>
+
+      <!-- Workspace Grid Layout -->
+      <div class="workspace-layout">
+
+        <!-- Left Panel: Diagram + Controls -->
+        <div class="left-workspace-panel">
+
+          <!-- Diagram Card -->
+          <div class="diagram-card">
+            <div id="diagram-svg-wrapper" class="diagram-svg-wrapper">
+              <!-- SVG dynamically rendered here -->
+            </div>
+          </div>
+
+          <!-- Controls for Scenario 1 (Garden Builder) -->
+          <div id="scenario-1-controls" class="scenario-controls hidden" hidden>
+            <h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 1.1rem;">1️⃣ Select Shape 1:</h3>
+            <div id="shape1-tile-grid" class="tile-selection-grid"></div>
+
+            <h3 style="margin-top: 12px; margin-bottom: 8px; font-size: 1.1rem;">2️⃣ Select Shape 2:</h3>
+            <div id="shape2-tile-grid" class="tile-selection-grid"></div>
+
+            <div class="join-control-panel">
+              <h3 style="margin-bottom: 12px; font-size: 1.1rem;">3️⃣ Choose Join Attachment:</h3>
+              <div class="control-group">
+                <label class="control-label" for="select-side1">Attach Shape 1 Side:</label>
+                <select id="select-side1" class="control-select">
+                  <option value="right">Right Side</option>
+                  <option value="top">Top Side</option>
+                  <option value="bottom">Bottom Side</option>
+                  <option value="left">Left Side</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="select-side2">To Shape 2 Side:</label>
+                <select id="select-side2" class="control-select">
+                  <option value="left">Left Side</option>
+                  <option value="bottom">Bottom Side</option>
+                  <option value="top">Top Side</option>
+                  <option value="right">Right Side</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="select-alignment">Alignment:</label>
+                <select id="select-alignment" class="control-select">
+                  <option value="start">Flush at Start (Top/Left)</option>
+                  <option value="end">Flush at End (Bottom/Right)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <button id="submit-garden-btn" class="btn btn-green" style="flex: 1; min-height: 48px;">🚀 Submit Design</button>
+              <button id="show-example-btn" class="btn btn-orange hidden" hidden style="min-height: 48px;">💡 Show Example</button>
+            </div>
+
+            <div id="garden-feedback-box" class="feedback-box hidden" hidden></div>
+          </div>
+
+          <!-- Controls for Scenario 2 & 3 (Question Steps) -->
+          <div id="scenario-steps-controls" class="scenario-controls hidden" hidden>
+            <div class="step-card">
+              <div id="step-number-tag" style="font-weight: 700; color: #1565c0; font-size: 0.95rem; margin-bottom: 4px;">Step 1 of 8</div>
+              <h3 id="step-question-title" class="step-question-title">Step question goes here</h3>
+
+              <!-- Typed Input Form -->
+              <div id="typed-input-form" class="input-group">
+                <input type="text" id="step-typed-input" class="typed-input" placeholder="Type your answer..." />
+                <button id="submit-typed-btn" class="btn btn-primary" style="min-height: 48px; min-width: 100px;">Check</button>
+              </div>
+
+              <!-- MCQ Grid Form -->
+              <div id="mcq-input-form" class="mcq-grid hidden" hidden></div>
+
+              <!-- Action buttons: Hint -->
+              <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <button id="step-hint-btn" class="btn btn-secondary" style="min-height: 48px;">💡 Hint</button>
+              </div>
+
+              <!-- Feedback Box -->
+              <div id="step-feedback-box" class="feedback-box hidden" hidden></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Panel: Live Calculator -->
+        <div class="right-workspace-panel">
+          <div class="calculator-panel">
+            <div class="calculator-header">
+              <span>🧮 Live Calculator Panel</span>
+            </div>
+
+            <!-- BLUE Perimeter Card -->
+            <div class="calc-card-perimeter">
+              <div class="calc-card-title">📐 Perimeter (Outer sides only)</div>
+              <div id="calc-perimeter-working" class="calc-working">P = --</div>
+            </div>
+
+            <!-- GREEN Area Card -->
+            <div class="calc-card-area">
+              <div class="calc-card-title">🟩 Area (A1 + A2)</div>
+              <div id="calc-area-working" class="calc-working">A = --</div>
+            </div>
+
+            <!-- Cost Table -->
+            <table class="cost-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Quantity</th>
+                  <th>Unit Price</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="cost-table-body">
+                <tr><td>--</td><td>--</td><td>--</td><td>--</td></tr>
+              </tbody>
+            </table>
+
+            <!-- Budget Bar -->
+            <div class="budget-bar-container">
+              <div class="budget-label">
+                <span id="budget-status-text">Budget Status</span>
+                <span id="budget-left-text">RM 0</span>
+              </div>
+              <div class="budget-progress-track">
+                <div id="budget-progress-fill" class="budget-progress-fill green" style="width: 0%;"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
   </main>
+
+  <!-- COMPLETION MODAL OVERLAY -->
+  <div id="completion-modal" class="modal-overlay hidden" hidden role="dialog" aria-labelledby="completion-title">
+    <div class="modal-card">
+      <h2 id="completion-title" style="font-size: 1.8rem; color: #1b5e20; margin-bottom: 8px;">🎉 Project Completed!</h2>
+      <p id="completion-subtitle" style="font-size: 1.1rem; color: #555555; margin-bottom: 16px;">Awesome job staying in budget!</p>
+
+      <!-- Stars rating animation box -->
+      <div id="completion-stars-container" class="star-rating" style="justify-content: center; font-size: 2.5rem; margin-bottom: 16px;"></div>
+
+      <div id="completion-summary-text" style="background: #f5f5f5; border-radius: 12px; padding: 14px; margin-bottom: 20px; font-weight: 600;">
+        Summary stats
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button id="modal-replay-btn" class="btn btn-secondary" style="min-height: 48px;">🔄 Try Again</button>
+        <button id="modal-next-btn" class="btn btn-primary" style="min-height: 48px;">➡️ Next Scenario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY MODAL POP-UP -->
+  <div id="how-to-play-modal" class="modal-overlay hidden" hidden role="dialog" aria-labelledby="modal-title-text">
+    <div class="modal-card">
+      <button id="close-modal-btn" class="modal-close-btn" aria-label="Close modal">&times;</button>
+      <h2 id="modal-title-text" style="font-size: 1.5rem; margin-bottom: 16px; color: #1565c0;">🌟 How to Play World 3</h2>
+
+      <ul style="text-align: left; margin-bottom: 20px; padding-left: 20px;">
+        <li style="margin-bottom: 10px;"><strong>1. Choose a Client Project:</strong> School Garden, Classroom Floor, or Playground Mat.</li>
+        <li style="margin-bottom: 10px;"><strong>2. Build or Calculate:</strong> Join shapes for the garden or solve steps for floors & mats.</li>
+        <li style="margin-bottom: 10px;"><strong>3. Live Calculator:</strong> Keep track of perimeter, area, and total cost in real time.</li>
+        <li style="margin-bottom: 10px;"><strong>4. Earn Stars:</strong> Complete projects accurately and stay under budget to earn up to 3 stars!</li>
+      </ul>
+
+      <button id="modal-got-it-btn" class="btn btn-primary" style="width: 100%; min-height: 48px;">Got it!</button>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="site-footer">
     <p>Aligned with KSSR Year 5 Mathematics 6.3.1 and 6.3.2</p>
   </footer>
 
+  <script src="js/mathcore.js"></script>
+  <script src="js/reallifecore.js"></script>
+  <script src="js/reallife.js"></script>
 </body>
 </html>

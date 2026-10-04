@@ -11,7 +11,18 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const val = localStorage.getItem(key);
       if (!val) return 0;
-      const parsed = parseInt(val, 10);
+      const strVal = String(val).trim();
+      if (strVal.startsWith('{') || strVal.startsWith('[')) {
+        const parsed = JSON.parse(strVal);
+        if (typeof parsed === 'object' && parsed !== null) {
+          const numValues = Object.values(parsed).map(v => Number(v) || 0);
+          if (numValues.length > 0) {
+            const maxVal = Math.max(...numValues);
+            return Math.max(0, Math.min(3, Math.round(maxVal)));
+          }
+        }
+      }
+      const parsed = parseInt(strVal, 10);
       return isNaN(parsed) ? 0 : Math.max(0, Math.min(3, parsed));
     } catch (e) {
       console.warn('localStorage read failed for key:', key, e);

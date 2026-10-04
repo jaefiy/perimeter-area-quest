@@ -15,3 +15,8 @@
 - Add tests in tests/ (plain Node, no libraries, run with `node tests/<file>.test.js`). Every task must keep all tests passing.
 - Comment the code clearly so teacher trainees can read it.
 - Do not use copyrighted images, fonts, sounds or characters. Use only inline SVG, CSS, emoji and original shapes.
+  5. Curriculum scope (follow strictly):
+     - Perimeter of composite shapes (6.3.1): two shapes joined along a shared side. Allowed shapes: regular polygons up to 8 sides (equilateral triangle, square, regular pentagon, hexagon, heptagon, octagon), plus right-angled triangle, isosceles triangle and rectangle.
+     - Area of composite shapes (6.3.2): two shapes only, from: rectangle, square, equilateral triangle, isosceles triangle, right-angled triangle. Area of pentagon, hexagon, heptagon and octagon is NOT in Year 5 and must never be asked or calculated.
+     - Shared sides may be horizontal, vertical or sloped, as long as the two edges match.
+     - For an equilateral triangle, the height is given as data (side 4 cm: height 3.5 cm; side 8 cm: height 7 cm). Area = 1/2 x base x height using the given height.

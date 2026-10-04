@@ -131,7 +131,7 @@
 
           <div id="info-content">
             <div class="info-empty-card">
-              <p> Drag or tap 2 shapes to join them together so they touch along a side.</p>
+              <p>👉 Drag or tap 2 shapes to join them together so they touch along a side.</p>
             </div>
           </div>
 
@@ -144,19 +144,178 @@
       </div>
     </section>
 
-    <!-- Tab 2 Content (Coming Soon) -->
+    <!-- Tab 2 Content: Mission Time -->
     <section id="tab-2" class="tab-content hidden">
-      <div class="coming-soon-card">
-        <h2>🎯 2. Mission Time</h2>
-        <p>Coming soon! Complete timed challenges and test your perimeter & area skills.</p>
+      <div id="m-toast" class="lab-toast hidden" aria-live="polite"></div>
+
+      <!-- Final Victory Screen (hidden initially) -->
+      <div id="m-final-screen" class="mission-final-card hidden">
+        <h2 class="final-title">🎉 All Missions Complete!</h2>
+        <div id="m-final-badge" class="badge-display"></div>
+        <p id="m-final-stars-text" class="final-stars-text"></p>
+        <button id="m-btn-restart" class="btn btn-primary btn-lg">🔄 Play Again</button>
+      </div>
+
+      <!-- Active Mission Area -->
+      <div id="m-active-container">
+        <!-- Progress Bar & Star Header -->
+        <div class="mission-header-bar">
+          <div class="mission-progress-info">
+            <span id="m-progress-label" class="mission-step-badge">Mission 1 of 8</span>
+            <div class="progress-bar-track">
+              <div id="m-progress-bar-fill" class="progress-bar-fill" style="width: 12.5%;"></div>
+            </div>
+          </div>
+          <div class="mission-stars-summary">
+            <span class="total-stars-label">Total Stars:</span>
+            <span id="m-total-stars-val" class="stars-val-text">⭐ 0/24</span>
+          </div>
+        </div>
+
+        <!-- Mission Card Header & Prompt -->
+        <div class="mission-card-wrapper">
+          <div class="mission-card-top">
+            <div class="mission-title-group">
+              <h2 id="m-title" class="m-card-title">Mission 1: Two Squares</h2>
+              <div id="m-stars-current" class="m-current-stars">⭐ ⭐ ⭐</div>
+            </div>
+            <p id="m-prompt" class="m-card-prompt">Join two squares of side 4 cm side by side. What is the perimeter?</p>
+
+            <!-- Answer & Actions Row -->
+            <div class="m-answer-row">
+              <div class="m-input-group">
+                <label for="m-answer-input" class="m-input-label">Your Answer:</label>
+                <input type="text" id="m-answer-input" class="m-number-input" placeholder="0" autocomplete="off" />
+                <span id="m-unit-label" class="m-unit-text">cm</span>
+              </div>
+              <button id="m-btn-check" class="btn btn-primary m-btn-action">✅ Check</button>
+              <button id="m-btn-hint" class="btn btn-secondary m-btn-action">💡 Hint (-1 ⭐)</button>
+            </div>
+
+            <!-- Hint Box / Feedback -->
+            <div id="m-hint-box" class="m-hint-box hidden"></div>
+            <div id="m-feedback-box" class="m-feedback-box hidden"></div>
+          </div>
+        </div>
+
+        <!-- Mission Play Workspace (Tray + SVG Play Area) -->
+        <div class="lab-workspace m-workspace">
+          <!-- Shape Tray -->
+          <aside class="shape-tray m-tray" aria-label="Mission Shape Tray">
+            <h2 class="tray-title">🧰 Mission Tray</h2>
+
+            <div class="tray-group">
+              <h3 class="tray-group-title">Regular shapes</h3>
+              <div class="selector-row">
+                <label for="m-side-select"><strong>Side:</strong></label>
+                <select id="m-side-select" class="side-select">
+                  <option value="3">3 cm</option>
+                  <option value="4" selected>4 cm</option>
+                  <option value="5">5 cm</option>
+                  <option value="6">6 cm</option>
+                  <option value="8">8 cm</option>
+                </select>
+              </div>
+              <div class="tray-items-grid" id="m-regular-grid"></div>
+            </div>
+
+            <div class="tray-group">
+              <h3 class="tray-group-title">Rectangles</h3>
+              <div class="tray-items-grid" id="m-rectangles-grid"></div>
+            </div>
+
+            <div class="tray-group">
+              <h3 class="tray-group-title">Triangles</h3>
+              <div class="tray-items-grid" id="m-triangles-grid"></div>
+            </div>
+          </aside>
+
+          <!-- Play Area -->
+          <main class="play-area-wrapper m-play-area">
+            <div class="play-area-header">
+              <span class="scale-label">📐 1 square = 1 cm</span>
+              <div class="play-area-controls">
+                <button id="m-btn-reset" class="btn btn-secondary btn-sm">🔄 Reset Workspace</button>
+              </div>
+            </div>
+
+            <div class="play-area-container">
+              <svg id="m-play-area-svg" class="play-area-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                  <pattern id="m-grid-sub" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.5" />
+                  </pattern>
+                  <pattern id="m-grid-main" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <rect width="20" height="20" fill="url(#m-grid-sub)" />
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#b0bec5" stroke-width="1" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#m-grid-main)" />
+                <g id="m-svg-overlay-layer"></g>
+                <g id="m-svg-shapes-layer"></g>
+                <g id="m-svg-controls-layer"></g>
+              </svg>
+              <div id="m-sparkle-container" class="sparkle-container"></div>
+            </div>
+          </main>
+        </div>
       </div>
     </section>
 
-    <!-- Tab 3 Content (Coming Soon) -->
+    <!-- Tab 3 Content: Split It! -->
     <section id="tab-3" class="tab-content hidden">
-      <div class="coming-soon-card">
-        <h2>✂️ 3. Split It!</h2>
-        <p>Coming soon! Learn how to decompose complex composite shapes into simpler shapes.</p>
+      <div id="s-toast" class="lab-toast hidden" aria-live="polite"></div>
+
+      <!-- Split Final Screen -->
+      <div id="s-final-screen" class="split-final-card hidden">
+        <h2 class="final-title">🌟 Split It! Complete!</h2>
+        <div id="s-final-badge" class="badge-display"></div>
+        <p id="s-final-score-text" class="final-stars-text"></p>
+        <button id="s-btn-restart" class="btn btn-primary btn-lg">🔄 Play Again</button>
+      </div>
+
+      <!-- Active Split Game Container -->
+      <div id="s-active-container" class="split-container">
+        <!-- Split Game Header -->
+        <div class="split-header-bar">
+          <div class="split-step-info">
+            <span id="s-progress-label" class="mission-step-badge">Shape 1 of 6</span>
+          </div>
+          <div class="split-score-info">
+            <span class="total-stars-label">Score:</span>
+            <span id="s-score-val" class="stars-val-text">0 pts</span>
+          </div>
+        </div>
+
+        <div class="split-game-board">
+          <!-- Composite Display Area (Left) -->
+          <div class="split-target-card">
+            <h2 id="s-shape-title" class="s-card-title">Composite Shape 1</h2>
+            <p class="s-instruction-text">Drag or tap the correct Split Card onto this shape!</p>
+
+            <!-- SVG Target Box -->
+            <div id="s-target-dropzone" class="split-svg-box">
+              <svg id="s-target-svg" class="split-target-svg" viewBox="0 0 400 300">
+                <g id="s-svg-composite-layer"></g>
+                <g id="s-svg-labels-layer"></g>
+              </svg>
+              <div id="s-drop-indicator" class="drop-indicator-text">Drop Split Card Here</div>
+            </div>
+
+            <!-- Question 2: Area MCQ (Shown after matching card) -->
+            <div id="s-area-mcq-box" class="s-mcq-box hidden">
+              <p class="s-mcq-prompt">Great match! What is the Total Area?</p>
+              <div id="s-mcq-options" class="s-mcq-buttons"></div>
+            </div>
+            <div id="s-feedback-msg" class="s-feedback-box hidden"></div>
+          </div>
+
+          <!-- Split Cards Deck (Right) -->
+          <div class="split-cards-panel">
+            <h3 class="s-deck-title">✂️ Choose Split Card</h3>
+            <div id="s-cards-list" class="split-cards-grid"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -169,6 +328,8 @@
 
   <script src="js/mathcore.js"></script>
   <script src="js/labcore.js"></script>
+  <script src="js/missions.js"></script>
+  <script src="js/splitcore.js"></script>
   <script src="js/lab.js"></script>
 </body>
 </html>

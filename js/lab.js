@@ -1,6 +1,7 @@
 /**
  * js/lab.js
- * Interactive UI, SVG rendering, pointer events, and live info updates for World 1: Shape Lab.
+ * Interactive UI, SVG rendering, pointer events, and live updates for World 1: Shape Lab.
+ * Supports Tab 1 (Build and Discover), Tab 2 (Mission Time), and Tab 3 (Split It!).
  */
 
 (function () {
@@ -9,21 +10,41 @@
   // SVG grid scale constant: 20 pixels = 1 cm
   const SCALE = 20;
 
-  // App state
-  let placedShapes = []; // Array of { id, shape, initialX, initialY, label }
+  // --- TAB 1 STATE ---
+  let placedShapes = []; // Array of { id, shape, label }
   let activeShapeId = null;
   let dragOffset = { x: 0, y: 0 };
   let isDragging = false;
   let lastTapTime = 0;
   let nextShapeId = 1;
-
-  // View toggles
   let showSharedSide = false;
   let showOuterSides = false;
 
-  // DOM Elements
+  // --- TAB 2 (MISSION TIME) STATE ---
+  let currentMissionIndex = 0; // 0 to 7
+  let missionPlacedShapes = [];
+  let mActiveShapeId = null;
+  let mDragOffset = { x: 0, y: 0 };
+  let mIsDragging = false;
+  let mNextShapeId = 1;
+
+  let mAttemptCount = 0;
+  let mUsedHint = false;
+  let mMissionStars = [3, 3, 3, 3, 3, 3, 3, 3]; // stars achieved per mission
+  let mCurrentStars = 3;
+
+  // --- TAB 3 (SPLIT IT!) STATE ---
+  let currentSplitIndex = 0; // 0 to 5
+  let splitPoints = 0;
+  let splitCardMatched = false;
+  let selectedSplitCardTitle = null;
+
+  // DOM Elements - Tab Common / Navigation
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
+  const ziggyTipEl = document.getElementById('ziggy-tip');
+
+  // DOM Elements - Tab 1
   const sideLengthSelect = document.getElementById('side-length-select');
   const regularShapesGrid = document.getElementById('regular-shapes-grid');
   const rectanglesGrid = document.getElementById('rectangles-grid');
@@ -39,16 +60,81 @@
   const toastEl = document.getElementById('lab-toast');
   const sparkleContainer = document.getElementById('sparkle-container');
 
+  // DOM Elements - Tab 2
+  const mToastEl = document.getElementById('m-toast');
+  const mActiveContainer = document.getElementById('m-active-container');
+  const mFinalScreen = document.getElementById('m-final-screen');
+  const mFinalBadge = document.getElementById('m-final-badge');
+  const mFinalStarsText = document.getElementById('m-final-stars-text');
+  const mBtnRestart = document.getElementById('m-btn-restart');
+
+  const mProgressLabel = document.getElementById('m-progress-label');
+  const mProgressBarFill = document.getElementById('m-progress-bar-fill');
+  const mTotalStarsVal = document.getElementById('m-total-stars-val');
+
+  const mTitle = document.getElementById('m-title');
+  const mStarsCurrent = document.getElementById('m-stars-current');
+  const mPrompt = document.getElementById('m-prompt');
+  const mAnswerInput = document.getElementById('m-answer-input');
+  const mUnitLabel = document.getElementById('m-unit-label');
+  const mBtnCheck = document.getElementById('m-btn-check');
+  const mBtnHint = document.getElementById('m-btn-hint');
+  const mHintBox = document.getElementById('m-hint-box');
+  const mFeedbackBox = document.getElementById('m-feedback-box');
+
+  const mSideSelect = document.getElementById('m-side-select');
+  const mRegularGrid = document.getElementById('m-regular-grid');
+  const mRectanglesGrid = document.getElementById('m-rectangles-grid');
+  const mTrianglesGrid = document.getElementById('m-triangles-grid');
+
+  const mSvgPlayArea = document.getElementById('m-play-area-svg');
+  const mSvgOverlayLayer = document.getElementById('m-svg-overlay-layer');
+  const mSvgShapesLayer = document.getElementById('m-svg-shapes-layer');
+  const mSvgControlsLayer = document.getElementById('m-svg-controls-layer');
+  const mBtnReset = document.getElementById('m-btn-reset');
+
+  // DOM Elements - Tab 3
+  const sToastEl = document.getElementById('s-toast');
+  const sActiveContainer = document.getElementById('s-active-container');
+  const sFinalScreen = document.getElementById('s-final-screen');
+  const sFinalBadge = document.getElementById('s-final-badge');
+  const sFinalScoreText = document.getElementById('s-final-score-text');
+  const sBtnRestart = document.getElementById('s-btn-restart');
+
+  const sProgressLabel = document.getElementById('s-progress-label');
+  const sScoreVal = document.getElementById('s-score-val');
+  const sShapeTitle = document.getElementById('s-shape-title');
+
+  const sTargetDropzone = document.getElementById('s-target-dropzone');
+  const sSvgCompositeLayer = document.getElementById('s-svg-composite-layer');
+  const sSvgLabelsLayer = document.getElementById('s-svg-labels-layer');
+  const sCardsList = document.getElementById('s-cards-list');
+
+  const sAreaMcqBox = document.getElementById('s-area-mcq-box');
+  const sMcqOptions = document.getElementById('s-mcq-options');
+  const sFeedbackMsg = document.getElementById('s-feedback-msg');
+
   // --- Initialisation ---
   function init() {
     setupTabs();
+
+    // Tab 1 setup
     renderTray();
     setupPlayAreaPointerEvents();
     setupButtons();
-
     if (sideLengthSelect) {
       sideLengthSelect.addEventListener('change', renderRegularTray);
     }
+
+    // Tab 2 setup
+    setupMissionPointerEvents();
+    setupMissionControls();
+    if (mSideSelect) {
+      mSideSelect.addEventListener('change', renderMissionRegularTray);
+    }
+
+    // Tab 3 setup
+    setupSplitControls();
   }
 
   // --- Tab Management ---
@@ -62,35 +148,61 @@
         btn.classList.add('active');
         const targetEl = document.getElementById(targetTab);
         if (targetEl) targetEl.classList.remove('hidden');
+
+        if (targetTab === 'tab-1') {
+          if (ziggyTipEl) ziggyTipEl.textContent = '🌟 Ziggy says: "Try a pentagon and a hexagon with the same side!"';
+        } else if (targetTab === 'tab-2') {
+          if (ziggyTipEl) ziggyTipEl.textContent = '🌟 Ziggy says: "Build the shape and calculate perimeter or area!"';
+          loadMission(currentMissionIndex);
+        } else if (targetTab === 'tab-3') {
+          if (ziggyTipEl) ziggyTipEl.textContent = '🌟 Ziggy says: "Split the composite shape into two basic shapes!"';
+          loadSplitComposite(currentSplitIndex);
+        }
       });
     });
   }
 
   // --- Toast Notification ---
-  function showToast(msg) {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.remove('hidden');
+  function showToast(msg, targetToast = toastEl) {
+    if (!targetToast) return;
+    targetToast.textContent = msg;
+    targetToast.classList.remove('hidden');
     setTimeout(() => {
-      toastEl.classList.add('hidden');
+      targetToast.classList.add('hidden');
     }, 3000);
   }
 
-  // --- Shape Tray Rendering ---
+  // Confetti generator
+  function triggerConfetti() {
+    const colors = ['#f44336', '#e91e63', '#9c27b0', '#3f51b5', '#2196f3', '#4caf50', '#ffeb3b', '#ff9800'];
+    for (let i = 0; i < 40; i++) {
+      const conf = document.createElement('div');
+      conf.className = 'confetti-piece';
+      conf.style.left = Math.random() * 100 + 'vw';
+      conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      conf.style.animationDuration = (1.8 + Math.random() * 1.5) + 's';
+      document.body.appendChild(conf);
+      setTimeout(() => conf.remove(), 3000);
+    }
+  }
+
+  // ==========================================================================
+  // TAB 1: BUILD AND DISCOVER LOGIC
+  // ==========================================================================
+
   function renderTray() {
     renderRegularTray();
     renderRectanglesTray();
     renderTrianglesTray();
   }
 
-  function createTrayItemSVG(shape, labelText, heightText) {
+  function createTrayItemSVG(shape, labelText, heightText, onClickHandler) {
     const item = document.createElement('div');
     item.className = 'tray-item';
     item.setAttribute('tabindex', '0');
     item.setAttribute('role', 'button');
     item.setAttribute('aria-label', `Add ${labelText}`);
 
-    // Compute bounding box for centering in preview SVG
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     shape.vertices.forEach(v => {
       if (v.x < minX) minX = v.x;
@@ -105,7 +217,6 @@
     const viewBox = `${(minX - padding) * SCALE} ${(minY - padding) * SCALE} ${(width + padding * 2) * SCALE} ${(height + padding * 2) * SCALE}`;
 
     let pointsStr = shape.vertices.map(v => `${v.x * SCALE},${v.y * SCALE}`).join(' ');
-
     let hTextHtml = heightText ? `<div class="tray-item-label" style="color:#e65100;">${heightText}</div>` : '';
 
     item.innerHTML = `
@@ -116,11 +227,11 @@
       ${hTextHtml}
     `;
 
-    item.addEventListener('click', () => addShapeToPlayArea(shape, labelText));
+    item.addEventListener('click', () => onClickHandler(shape, labelText));
     item.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        addShapeToPlayArea(shape, labelText);
+        onClickHandler(shape, labelText);
       }
     });
 
@@ -139,7 +250,7 @@
         if (side === 4) hText = 'h = 3.5 cm';
         if (side === 8) hText = 'h = 7 cm';
       }
-      const item = createTrayItemSVG(shape, `${shape.name} (${side}cm)`, hText);
+      const item = createTrayItemSVG(shape, `${shape.name} (${side}cm)`, hText, addShapeToPlayArea);
       regularShapesGrid.appendChild(item);
     }
   }
@@ -147,14 +258,11 @@
   function renderRectanglesTray() {
     if (!rectanglesGrid) return;
     rectanglesGrid.innerHTML = '';
-    const dims = [
-      [4, 2], [5, 3], [6, 3],
-      [6, 4], [8, 3], [8, 5]
-    ];
+    const dims = [[4, 2], [5, 3], [6, 3], [6, 4], [8, 3], [8, 5]];
 
     dims.forEach(([w, h]) => {
       const shape = MathCore.createRectangle(w, h, 0, 0);
-      const item = createTrayItemSVG(shape, `rect ${w}x${h} cm`, null);
+      const item = createTrayItemSVG(shape, `rect ${w}x${h} cm`, null, addShapeToPlayArea);
       rectanglesGrid.appendChild(item);
     });
   }
@@ -163,41 +271,32 @@
     if (!trianglesGrid) return;
     trianglesGrid.innerHTML = '';
 
-    // 1. Right-angled 3-4-5
     const tri1 = MathCore.createRightTriangle(4, 3, 0, 0);
-    trianglesGrid.appendChild(createTrayItemSVG(tri1, 'right 3-4-5 cm', null));
+    trianglesGrid.appendChild(createTrayItemSVG(tri1, 'right 3-4-5 cm', null, addShapeToPlayArea));
 
-    // 2. Right-angled 6-8-10
     const tri2 = MathCore.createRightTriangle(8, 6, 0, 0);
-    trianglesGrid.appendChild(createTrayItemSVG(tri2, 'right 6-8-10 cm', null));
+    trianglesGrid.appendChild(createTrayItemSVG(tri2, 'right 6-8-10 cm', null, addShapeToPlayArea));
 
-    // 3. Right-angled 5-12-13
     const tri3 = MathCore.createRightTriangle(12, 5, 0, 0);
-    trianglesGrid.appendChild(createTrayItemSVG(tri3, 'right 5-12-13 cm', null));
+    trianglesGrid.appendChild(createTrayItemSVG(tri3, 'right 5-12-13 cm', null, addShapeToPlayArea));
 
-    // 4. Isosceles base 6, equal 5, height 4
     const tri4 = MathCore.createIsoscelesTriangle(6, 4, 0, 0);
-    trianglesGrid.appendChild(createTrayItemSVG(tri4, 'isosceles 6x5x5 cm', 'h = 4 cm'));
+    trianglesGrid.appendChild(createTrayItemSVG(tri4, 'isosceles 6x5x5 cm', 'h = 4 cm', addShapeToPlayArea));
 
-    // 5. Isosceles base 8, equal 5, height 3
     const tri5 = MathCore.createIsoscelesTriangle(8, 3, 0, 0);
-    trianglesGrid.appendChild(createTrayItemSVG(tri5, 'isosceles 8x5x5 cm', 'h = 3 cm'));
+    trianglesGrid.appendChild(createTrayItemSVG(tri5, 'isosceles 8x5x5 cm', 'h = 3 cm', addShapeToPlayArea));
   }
 
-  // --- Workspace & Shape Placement ---
   function addShapeToPlayArea(rawShape, label) {
     if (placedShapes.length >= 2) {
       showToast('Only two shapes at a time! Remove one first.');
       return;
     }
 
-    // Determine initial placement position in grid cm (centerish)
     const offsetX = placedShapes.length === 0 ? 4 : 14;
     const offsetY = 6;
-
     const initialShape = LabCore.translateShape(rawShape, offsetX, offsetY);
 
-    // If there is already a shape placed, attempt edge snap on add
     let finalShape = initialShape;
     if (placedShapes.length === 1) {
       const snapped = LabCore.findEdgeSnap(initialShape, placedShapes[0].shape, 8.0);
@@ -239,7 +338,6 @@
 
     item.shape = rotated;
 
-    // Check edge snap after rotate
     if (other) {
       const snapped = LabCore.findEdgeSnap(item.shape, other.shape, 2.0);
       if (snapped) {
@@ -287,22 +385,21 @@
     }
   }
 
-  function triggerSparkle() {
-    if (!sparkleContainer) return;
-    sparkleContainer.innerHTML = '';
+  function triggerSparkle(targetContainer = sparkleContainer) {
+    if (!targetContainer) return;
+    targetContainer.innerHTML = '';
     for (let i = 0; i < 6; i++) {
       const spark = document.createElement('div');
       spark.className = 'sparkle-pop';
       spark.style.left = `${30 + Math.random() * 40}%`;
       spark.style.top = `${30 + Math.random() * 40}%`;
-      sparkleContainer.appendChild(spark);
+      targetContainer.appendChild(spark);
     }
     setTimeout(() => {
-      sparkleContainer.innerHTML = '';
+      targetContainer.innerHTML = '';
     }, 700);
   }
 
-  // --- SVG Play Area Rendering ---
   function renderPlayArea() {
     svgOverlayLayer.innerHTML = '';
     svgShapesLayer.innerHTML = '';
@@ -310,7 +407,6 @@
 
     const isJoined = placedShapes.length === 2 && MathCore.sharedLength(placedShapes[0].shape, placedShapes[1].shape) > 0;
 
-    // 1. Draw shapes
     placedShapes.forEach(item => {
       const shape = item.shape;
       const pointsStr = shape.vertices.map(v => `${v.x * SCALE},${v.y * SCALE}`).join(' ');
@@ -321,7 +417,6 @@
       polygon.setAttribute('data-shape-id', item.id);
       svgShapesLayer.appendChild(polygon);
 
-      // Draw side labels on shape
       shape.edges.forEach(edge => {
         const midX = (edge.p1.x + edge.p2.x) / 2;
         const midY = (edge.p1.y + edge.p2.y) / 2;
@@ -334,7 +429,6 @@
         svgShapesLayer.appendChild(text);
       });
 
-      // Special height labels for equilateral triangles or isosceles triangles if applicable
       if (shape.type === 'equilateral triangle' && (shape.side === 4 || shape.side === 8)) {
         const centroid = getCentroid(shape.vertices);
         const hVal = shape.side === 4 ? 3.5 : 7;
@@ -355,21 +449,19 @@
         svgShapesLayer.appendChild(hText);
       }
 
-      // Draw action controls (x, rotate, flip) near top-right of shape bounding box
       renderShapeControls(item);
     });
 
-    // 2. Overlay toggles (Shared Side / Outer Boundary)
     if (isJoined) {
       const sA = placedShapes[0].shape;
       const sB = placedShapes[1].shape;
 
       if (showSharedSide) {
-        renderSharedSideOverlay(sA, sB);
+        renderSharedSideOverlay(sA, sB, svgOverlayLayer);
       }
 
       if (showOuterSides) {
-        renderOuterSidesOverlay(sA, sB);
+        renderOuterSidesOverlay(sA, sB, svgOverlayLayer);
       }
     }
   }
@@ -394,7 +486,6 @@
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('transform', `translate(${cx}, ${cy})`);
 
-    // Remove (x)
     const btnRemove = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     btnRemove.setAttribute('class', 'shape-control-btn');
     btnRemove.innerHTML = `
@@ -406,7 +497,6 @@
       removeShape(item.id);
     });
 
-    // Rotate 90
     const btnRot = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     btnRot.setAttribute('class', 'shape-control-btn');
     btnRot.setAttribute('transform', 'translate(28, 0)');
@@ -419,7 +509,6 @@
       rotateShape90(item.id);
     });
 
-    // Flip
     const btnFlip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     btnFlip.setAttribute('class', 'shape-control-btn');
     btnFlip.setAttribute('transform', 'translate(56, 0)');
@@ -439,7 +528,7 @@
     svgControlsLayer.appendChild(group);
   }
 
-  function renderSharedSideOverlay(A, B) {
+  function renderSharedSideOverlay(A, B, targetLayer) {
     const EPS = 1e-6;
     for (const eA of A.edges) {
       const ax = eA.p2.x - eA.p1.x;
@@ -486,9 +575,8 @@
           line.setAttribute('x2', sx2 * SCALE);
           line.setAttribute('y2', sy2 * SCALE);
           line.setAttribute('class', 'shared-edge-line');
-          svgOverlayLayer.appendChild(line);
+          targetLayer.appendChild(line);
 
-          // Shared label
           const midX = (sx1 + sx2) / 2;
           const midY = (sy1 + sy2) / 2;
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -499,15 +587,13 @@
           text.setAttribute('font-weight', 'bold');
           text.setAttribute('text-anchor', 'middle');
           text.textContent = `Shared side (${MathCore.formatNumber(overlap)} cm): NOT counted in perimeter`;
-          svgOverlayLayer.appendChild(text);
+          targetLayer.appendChild(text);
         }
       }
     }
   }
 
-  function renderOuterSidesOverlay(A, B) {
-    // Draw outer boundary in bold blue line
-    // Collect outer edge segments
+  function renderOuterSidesOverlay(A, B, targetLayer) {
     const outerSegments = getOuterEdgeSegments(A, B);
     outerSegments.forEach(seg => {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -516,7 +602,7 @@
       line.setAttribute('x2', seg.p2.x * SCALE);
       line.setAttribute('y2', seg.p2.y * SCALE);
       line.setAttribute('class', 'outer-edge-line');
-      svgOverlayLayer.appendChild(line);
+      targetLayer.appendChild(line);
     });
   }
 
@@ -535,7 +621,6 @@
         const nx = -uy;
         const ny = ux;
 
-        // Find overlaps with other's edges
         let overlaps = [];
         for (const eB of other.edges) {
           const bx = eB.p2.x - eB.p1.x;
@@ -564,11 +649,9 @@
           }
         }
 
-        // Subtract overlaps from [0, lenA]
         if (overlaps.length === 0) {
           outerSegments.push({ p1: edge.p1, p2: edge.p2, length: lenA });
         } else {
-          // Sort overlaps
           overlaps.sort((a, b) => a[0] - b[0]);
           let current = 0;
           for (const [s, e] of overlaps) {
@@ -598,18 +681,16 @@
     return outerSegments;
   }
 
-  // --- Pointer Events for Dragging & Snapping ---
   function setupPlayAreaPointerEvents() {
     if (!svgPlayArea) return;
-
     svgPlayArea.addEventListener('pointerdown', handlePointerDown);
     svgPlayArea.addEventListener('pointermove', handlePointerMove);
     svgPlayArea.addEventListener('pointerup', handlePointerUp);
     svgPlayArea.addEventListener('pointercancel', handlePointerUp);
   }
 
-  function getSVGPoint(e) {
-    const rect = svgPlayArea.getBoundingClientRect();
+  function getSVGPoint(e, targetSvg = svgPlayArea) {
+    const rect = targetSvg.getBoundingClientRect();
     const xPx = (e.clientX - rect.left) * (600 / rect.width);
     const yPx = (e.clientY - rect.top) * (500 / rect.height);
     return { x: xPx / SCALE, y: yPx / SCALE };
@@ -623,7 +704,6 @@
     const item = placedShapes.find(s => s.id === id);
     if (!item) return;
 
-    // Double tap detection
     const now = Date.now();
     if (activeShapeId === id && now - lastTapTime < 300) {
       rotateShape90(id);
@@ -637,7 +717,6 @@
     svgPlayArea.setPointerCapture(e.pointerId);
 
     const pt = getSVGPoint(e);
-    // Calculate dragOffset relative to first vertex of shape
     dragOffset = {
       x: pt.x - item.shape.vertices[0].x,
       y: pt.y - item.shape.vertices[0].y
@@ -654,7 +733,6 @@
     let newX1 = pt.x - dragOffset.x;
     let newY1 = pt.y - dragOffset.y;
 
-    // Apply grid snap to 0.5 cm
     newX1 = LabCore.snapToGrid(newX1, 0.5);
     newY1 = LabCore.snapToGrid(newY1, 0.5);
 
@@ -669,19 +747,16 @@
 
   function handlePointerUp(e) {
     if (!isDragging || !activeShapeId) return;
-
     isDragging = false;
 
     const item = placedShapes.find(s => s.id === activeShapeId);
     const other = placedShapes.find(s => s.id !== activeShapeId);
 
     if (item && other) {
-      // 1. Check overlap
       if (MathCore.shapesOverlap(item.shape, other.shape)) {
         showToast('Shapes cannot overlap!');
         flashShapeError(item.id);
       } else {
-        // 2. Check edge snap
         const snapped = LabCore.findEdgeSnap(item.shape, other.shape, 1.5);
         if (snapped) {
           item.shape = snapped;
@@ -695,7 +770,6 @@
     updateInfoPanel();
   }
 
-  // --- Info Panel Updates ---
   function updateInfoPanel() {
     const isJoined = placedShapes.length === 2 && MathCore.sharedLength(placedShapes[0].shape, placedShapes[1].shape) > 0;
 
@@ -719,11 +793,9 @@
     const p2 = sB.perimeter;
     const totalP = MathCore.compositePerimeter(sA, sB);
 
-    // Outer edge terms for formula display
     const outerSegs = getOuterEdgeSegments(sA, sB);
     const outerSumStr = outerSegs.map(s => MathCore.formatNumber(s.length)).join(' + ') + ` = ${totalP} cm`;
 
-    // Perimeter Card (BLUE)
     let pCardHtml = `
       <div class="info-card info-card-blue">
         <div class="info-card-title">📏 Perimeter</div>
@@ -734,7 +806,6 @@
       </div>
     `;
 
-    // Area Card (GREEN or Grey)
     let aCardHtml = '';
     const totalA = MathCore.compositeArea(sA, sB);
 
@@ -759,7 +830,6 @@
     infoContent.innerHTML = pCardHtml + aCardHtml;
   }
 
-  // --- Controls & Reset ---
   function setupButtons() {
     if (btnReset) {
       btnReset.addEventListener('click', () => {
@@ -790,6 +860,775 @@
     }
   }
 
-  // Start app
+  // ==========================================================================
+  // TAB 2: MISSION TIME LOGIC
+  // ==========================================================================
+
+  function renderMissionTray() {
+    renderMissionRegularTray();
+    renderMissionRectanglesTray();
+    renderMissionTrianglesTray();
+  }
+
+  function renderMissionRegularTray() {
+    if (!mRegularGrid) return;
+    mRegularGrid.innerHTML = '';
+    const side = parseFloat(mSideSelect ? mSideSelect.value : 4);
+
+    for (let n = 3; n <= 8; n++) {
+      const shape = MathCore.regularPolygon(n, side, 0, 0);
+      let hText = null;
+      if (n === 3) {
+        if (side === 4) hText = 'h = 3.5 cm';
+        if (side === 8) hText = 'h = 7 cm';
+      }
+      const item = createTrayItemSVG(shape, `${shape.name} (${side}cm)`, hText, addShapeToMissionPlayArea);
+      mRegularGrid.appendChild(item);
+    }
+  }
+
+  function renderMissionRectanglesTray() {
+    if (!mRectanglesGrid) return;
+    mRectanglesGrid.innerHTML = '';
+    const dims = [[4, 2], [5, 3], [6, 3], [6, 4], [7, 3], [8, 3], [8, 5]];
+
+    dims.forEach(([w, h]) => {
+      const shape = MathCore.createRectangle(w, h, 0, 0);
+      const item = createTrayItemSVG(shape, `rect ${w}x${h} cm`, null, addShapeToMissionPlayArea);
+      mRectanglesGrid.appendChild(item);
+    });
+  }
+
+  function renderMissionTrianglesTray() {
+    if (!mTrianglesGrid) return;
+    mTrianglesGrid.innerHTML = '';
+
+    const tri1 = MathCore.createRightTriangle(3, 4, 0, 0);
+    mTrianglesGrid.appendChild(createTrayItemSVG(tri1, 'right 3-4-5 cm', null, addShapeToMissionPlayArea));
+
+    const tri2 = MathCore.createIsoscelesTriangle(6, 4, 0, 0);
+    mTrianglesGrid.appendChild(createTrayItemSVG(tri2, 'isosceles 6x5x5 cm', 'h = 4 cm', addShapeToMissionPlayArea));
+  }
+
+  function loadMission(index) {
+    if (!window.Missions) return;
+
+    if (index >= Missions.missionsList.length) {
+      showMissionFinalScreen();
+      return;
+    }
+
+    currentMissionIndex = index;
+    mAttemptCount = 0;
+    mUsedHint = false;
+    mCurrentStars = 3;
+    missionPlacedShapes = [];
+
+    const mission = Missions.getMission(Missions.missionsList[index].id);
+
+    if (mProgressLabel) mProgressLabel.textContent = `Mission ${index + 1} of ${Missions.missionsList.length}`;
+    if (mProgressBarFill) mProgressBarFill.style.width = `${((index + 1) / Missions.missionsList.length) * 100}%`;
+
+    updateTotalStarsDisplay();
+
+    if (mTitle) mTitle.textContent = mission.title;
+    if (mPrompt) mPrompt.textContent = mission.prompt;
+    if (mUnitLabel) mUnitLabel.textContent = mission.unit;
+    if (mAnswerInput) {
+      mAnswerInput.value = '';
+      mAnswerInput.disabled = false;
+    }
+
+    if (mHintBox) {
+      mHintBox.textContent = '';
+      mHintBox.classList.add('hidden');
+    }
+    if (mFeedbackBox) {
+      mFeedbackBox.textContent = '';
+      mFeedbackBox.classList.add('hidden');
+      mFeedbackBox.className = 'm-feedback-box hidden';
+    }
+
+    updateCurrentMissionStarsDisplay();
+    renderMissionTray();
+    renderMissionPlayArea();
+  }
+
+  function updateCurrentMissionStarsDisplay() {
+    if (!mStarsCurrent) return;
+    let starsStr = '';
+    for (let i = 0; i < mCurrentStars; i++) starsStr += '⭐ ';
+    for (let i = mCurrentStars; i < 3; i++) starsStr += '☆ ';
+    mStarsCurrent.textContent = starsStr.trim();
+  }
+
+  function updateTotalStarsDisplay() {
+    if (!mTotalStarsVal) return;
+    const total = mMissionStars.reduce((a, b) => a + b, 0);
+    mTotalStarsVal.textContent = `⭐ ${total}/24`;
+  }
+
+  function addShapeToMissionPlayArea(rawShape, label) {
+    if (missionPlacedShapes.length >= 2) {
+      showToast('Only two shapes at a time! Remove one first.', mToastEl);
+      return;
+    }
+
+    const offsetX = missionPlacedShapes.length === 0 ? 4 : 14;
+    const offsetY = 6;
+    const initialShape = LabCore.translateShape(rawShape, offsetX, offsetY);
+
+    let finalShape = initialShape;
+    if (missionPlacedShapes.length === 1) {
+      const snapped = LabCore.findEdgeSnap(initialShape, missionPlacedShapes[0].shape, 8.0);
+      if (snapped) {
+        finalShape = snapped;
+        triggerSparkle(mSparkleContainer);
+      }
+    }
+
+    const shapeObj = {
+      id: mNextShapeId++,
+      shape: finalShape,
+      label: label
+    };
+
+    missionPlacedShapes.push(shapeObj);
+    renderMissionPlayArea();
+  }
+
+  function removeMissionShape(id) {
+    missionPlacedShapes = missionPlacedShapes.filter(s => s.id !== id);
+    renderMissionPlayArea();
+  }
+
+  function rotateMissionShape90(id) {
+    const item = missionPlacedShapes.find(s => s.id === id);
+    if (!item) return;
+
+    const rotated = LabCore.rotateShape90(item.shape);
+    const other = missionPlacedShapes.find(s => s.id !== id);
+
+    if (other && MathCore.shapesOverlap(rotated, other.shape)) {
+      showToast('Shapes cannot overlap!', mToastEl);
+      return;
+    }
+
+    item.shape = rotated;
+
+    if (other) {
+      const snapped = LabCore.findEdgeSnap(item.shape, other.shape, 2.0);
+      if (snapped) {
+        item.shape = snapped;
+        triggerSparkle(mSparkleContainer);
+      }
+    }
+
+    renderMissionPlayArea();
+  }
+
+  function flipMissionShape(id) {
+    const item = missionPlacedShapes.find(s => s.id === id);
+    if (!item) return;
+
+    const flipped = LabCore.flipShape(item.shape);
+    const other = missionPlacedShapes.find(s => s.id !== id);
+
+    if (other && MathCore.shapesOverlap(flipped, other.shape)) {
+      showToast('Shapes cannot overlap!', mToastEl);
+      return;
+    }
+
+    item.shape = flipped;
+
+    if (other) {
+      const snapped = LabCore.findEdgeSnap(item.shape, other.shape, 2.0);
+      if (snapped) {
+        item.shape = snapped;
+        triggerSparkle(mSparkleContainer);
+      }
+    }
+
+    renderMissionPlayArea();
+  }
+
+  function renderMissionPlayArea() {
+    mSvgOverlayLayer.innerHTML = '';
+    mSvgShapesLayer.innerHTML = '';
+    mSvgControlsLayer.innerHTML = '';
+
+    const isJoined = missionPlacedShapes.length === 2 && MathCore.sharedLength(missionPlacedShapes[0].shape, missionPlacedShapes[1].shape) > 0;
+
+    missionPlacedShapes.forEach(item => {
+      const shape = item.shape;
+      const pointsStr = shape.vertices.map(v => `${v.x * SCALE},${v.y * SCALE}`).join(' ');
+
+      const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      polygon.setAttribute('points', pointsStr);
+      polygon.setAttribute('class', `shape-polygon ${isJoined ? 'joined' : ''}`);
+      polygon.setAttribute('data-shape-id', item.id);
+      mSvgShapesLayer.appendChild(polygon);
+
+      shape.edges.forEach(edge => {
+        const midX = (edge.p1.x + edge.p2.x) / 2;
+        const midY = (edge.p1.y + edge.p2.y) / 2;
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX * SCALE);
+        text.setAttribute('y', midY * SCALE);
+        text.setAttribute('class', 'side-label-text');
+        text.textContent = `${MathCore.formatNumber(edge.length)} cm`;
+        mSvgShapesLayer.appendChild(text);
+      });
+
+      renderMissionShapeControls(item);
+    });
+  }
+
+  function renderMissionShapeControls(item) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity;
+    item.shape.vertices.forEach(v => {
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.x > maxX) maxX = v.x;
+    });
+
+    const cx = (maxX + 0.5) * SCALE;
+    const cy = (minY - 0.5) * SCALE;
+
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('transform', `translate(${cx}, ${cy})`);
+
+    const btnRemove = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    btnRemove.setAttribute('class', 'shape-control-btn');
+    btnRemove.innerHTML = `
+      <circle cx="0" cy="0" r="12" fill="#d32f2f" />
+      <text x="0" y="4" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">×</text>
+    `;
+    btnRemove.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      removeMissionShape(item.id);
+    });
+
+    const btnRot = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    btnRot.setAttribute('class', 'shape-control-btn');
+    btnRot.setAttribute('transform', 'translate(28, 0)');
+    btnRot.innerHTML = `
+      <circle cx="0" cy="0" r="12" fill="#1565c0" />
+      <text x="0" y="4" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">↻</text>
+    `;
+    btnRot.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      rotateMissionShape90(item.id);
+    });
+
+    const btnFlip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    btnFlip.setAttribute('class', 'shape-control-btn');
+    btnFlip.setAttribute('transform', 'translate(56, 0)');
+    btnFlip.innerHTML = `
+      <circle cx="0" cy="0" r="12" fill="#6a1b9a" />
+      <text x="0" y="4" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">⇄</text>
+    `;
+    btnFlip.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      flipMissionShape(item.id);
+    });
+
+    group.appendChild(btnRemove);
+    group.appendChild(btnRot);
+    group.appendChild(btnFlip);
+
+    mSvgControlsLayer.appendChild(group);
+  }
+
+  function setupMissionPointerEvents() {
+    if (!mSvgPlayArea) return;
+    mSvgPlayArea.addEventListener('pointerdown', handleMissionPointerDown);
+    mSvgPlayArea.addEventListener('pointermove', handleMissionPointerMove);
+    mSvgPlayArea.addEventListener('pointerup', handleMissionPointerUp);
+    mSvgPlayArea.addEventListener('pointercancel', handleMissionPointerUp);
+  }
+
+  function handleMissionPointerDown(e) {
+    const target = e.target.closest('[data-shape-id]');
+    if (!target) return;
+
+    const id = parseInt(target.getAttribute('data-shape-id'), 10);
+    const item = missionPlacedShapes.find(s => s.id === id);
+    if (!item) return;
+
+    mActiveShapeId = id;
+    mIsDragging = true;
+    mSvgPlayArea.setPointerCapture(e.pointerId);
+
+    const pt = getSVGPoint(e, mSvgPlayArea);
+    mDragOffset = {
+      x: pt.x - item.shape.vertices[0].x,
+      y: pt.y - item.shape.vertices[0].y
+    };
+  }
+
+  function handleMissionPointerMove(e) {
+    if (!mIsDragging || !mActiveShapeId) return;
+
+    const item = missionPlacedShapes.find(s => s.id === mActiveShapeId);
+    if (!item) return;
+
+    const pt = getSVGPoint(e, mSvgPlayArea);
+    let newX1 = pt.x - mDragOffset.x;
+    let newY1 = pt.y - mDragOffset.y;
+
+    newX1 = LabCore.snapToGrid(newX1, 0.5);
+    newY1 = LabCore.snapToGrid(newY1, 0.5);
+
+    const dx = newX1 - item.shape.vertices[0].x;
+    const dy = newY1 - item.shape.vertices[0].y;
+
+    if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return;
+
+    item.shape = LabCore.translateShape(item.shape, dx, dy);
+    renderMissionPlayArea();
+  }
+
+  function handleMissionPointerUp(e) {
+    if (!mIsDragging || !mActiveShapeId) return;
+    mIsDragging = false;
+
+    const item = missionPlacedShapes.find(s => s.id === mActiveShapeId);
+    const other = missionPlacedShapes.find(s => s.id !== mActiveShapeId);
+
+    if (item && other) {
+      if (MathCore.shapesOverlap(item.shape, other.shape)) {
+        showToast('Shapes cannot overlap!', mToastEl);
+      } else {
+        const snapped = LabCore.findEdgeSnap(item.shape, other.shape, 1.5);
+        if (snapped) {
+          item.shape = snapped;
+          triggerSparkle(mSparkleContainer);
+        }
+      }
+    }
+
+    mActiveShapeId = null;
+    renderMissionPlayArea();
+  }
+
+  function setupMissionControls() {
+    if (mBtnReset) {
+      mBtnReset.addEventListener('click', () => {
+        missionPlacedShapes = [];
+        renderMissionPlayArea();
+      });
+    }
+
+    if (mBtnHint) {
+      mBtnHint.addEventListener('click', () => {
+        if (!window.Missions) return;
+        const mission = Missions.getMission(Missions.missionsList[currentMissionIndex].id);
+        if (mHintBox) {
+          mHintBox.textContent = `💡 Hint: ${mission.hint}`;
+          mHintBox.classList.remove('hidden');
+        }
+        if (!mUsedHint) {
+          mUsedHint = true;
+          if (mCurrentStars > 2) {
+            mCurrentStars = 2;
+            updateCurrentMissionStarsDisplay();
+          }
+        }
+      });
+    }
+
+    if (mBtnCheck) {
+      mBtnCheck.addEventListener('click', checkCurrentMission);
+    }
+
+    if (mBtnRestart) {
+      mBtnRestart.addEventListener('click', () => {
+        mMissionStars = [3, 3, 3, 3, 3, 3, 3, 3];
+        mFinalScreen.classList.add('hidden');
+        mActiveContainer.classList.remove('hidden');
+        loadMission(0);
+      });
+    }
+  }
+
+  function checkCurrentMission() {
+    if (!window.Missions) return;
+
+    const mission = Missions.getMission(Missions.missionsList[currentMissionIndex].id);
+    const userInput = mAnswerInput ? mAnswerInput.value : '';
+
+    const res = Missions.checkMissionAnswer(mission.id, missionPlacedShapes, userInput);
+
+    if (res.builtError) {
+      showToast(res.message, mToastEl);
+      return;
+    }
+
+    mAttemptCount++;
+
+    if (res.success) {
+      // Calculate stars based on attempts and hint
+      let stars = 3;
+      if (mUsedHint || mAttemptCount === 2) {
+        stars = 2;
+      } else if (mAttemptCount >= 3) {
+        stars = 1;
+      }
+
+      mMissionStars[currentMissionIndex] = stars;
+      updateTotalStarsDisplay();
+
+      triggerConfetti();
+
+      if (mFeedbackBox) {
+        mFeedbackBox.textContent = `🎉 Ziggy says: "${res.message}"`;
+        mFeedbackBox.className = 'm-feedback-box correct';
+        mFeedbackBox.classList.remove('hidden');
+      }
+
+      if (mAnswerInput) mAnswerInput.disabled = true;
+
+      setTimeout(() => {
+        if (currentMissionIndex + 1 < Missions.missionsList.length) {
+          loadMission(currentMissionIndex + 1);
+        } else {
+          showMissionFinalScreen();
+        }
+      }, 1800);
+
+    } else {
+      // Wrong answer logic
+      if (mAttemptCount === 1) {
+        mCurrentStars = mUsedHint ? 2 : 2;
+      } else if (mAttemptCount >= 2) {
+        mCurrentStars = 1;
+      }
+      updateCurrentMissionStarsDisplay();
+
+      if (mFeedbackBox) {
+        mFeedbackBox.textContent = `❌ ${res.message}`;
+        mFeedbackBox.className = 'm-feedback-box incorrect';
+        mFeedbackBox.classList.remove('hidden');
+      }
+    }
+  }
+
+  function showMissionFinalScreen() {
+    if (mActiveContainer) mActiveContainer.classList.add('hidden');
+    if (mFinalScreen) mFinalScreen.classList.remove('hidden');
+
+    const totalStars = mMissionStars.reduce((a, b) => a + b, 0);
+
+    let badge = '🥉 Bronze Badge';
+    let starsToSave = 1;
+
+    if (totalStars >= 20) {
+      badge = '🥇 Gold Badge';
+      starsToSave = 3;
+    } else if (totalStars >= 12) {
+      badge = '🥈 Silver Badge';
+      starsToSave = 2;
+    }
+
+    if (mFinalBadge) mFinalBadge.textContent = badge;
+    if (mFinalStarsText) mFinalStarsText.textContent = `You earned ${totalStars} out of 24 stars!`;
+
+    try {
+      localStorage.setItem('paq_lab_stars', starsToSave.toString());
+    } catch (e) {
+      // Storage unavailable
+    }
+
+    triggerConfetti();
+  }
+
+  // ==========================================================================
+  // TAB 3: SPLIT IT! LOGIC
+  // ==========================================================================
+
+  function loadSplitComposite(index) {
+    if (!window.SplitCore) return;
+
+    if (index >= SplitCore.composites.length) {
+      showSplitFinalScreen();
+      return;
+    }
+
+    currentSplitIndex = index;
+    splitCardMatched = false;
+    selectedSplitCardTitle = null;
+
+    const comp = SplitCore.getComposite(SplitCore.composites[index].id);
+
+    if (sProgressLabel) sProgressLabel.textContent = `Shape ${index + 1} of ${SplitCore.composites.length}`;
+    if (sScoreVal) sScoreVal.textContent = `${splitPoints} pts`;
+    if (sShapeTitle) sShapeTitle.textContent = comp.title;
+
+    if (sAreaMcqBox) sAreaMcqBox.classList.add('hidden');
+    if (sFeedbackMsg) {
+      sFeedbackMsg.textContent = '';
+      sFeedbackMsg.classList.add('hidden');
+      sFeedbackMsg.className = 's-feedback-box hidden';
+    }
+
+    renderCompositeTargetSVG(comp);
+    renderSplitCardsDeck(comp);
+  }
+
+  function renderCompositeTargetSVG(comp) {
+    sSvgCompositeLayer.innerHTML = '';
+    sSvgLabelsLayer.innerHTML = '';
+
+    const shapes = comp.shapes;
+    const allVertices = [...shapes.s1.vertices, ...shapes.s2.vertices];
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    allVertices.forEach(v => {
+      if (v.x < minX) minX = v.x;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    });
+
+    const shapeW = maxX - minX;
+    const shapeH = maxY - minY;
+
+    // Viewbox 400x300, scale and center shape
+    const scaleFactor = Math.min(220 / (shapeW || 1), 180 / (shapeH || 1));
+    const offsetX = (400 - shapeW * scaleFactor) / 2 - minX * scaleFactor;
+    const offsetY = (300 - shapeH * scaleFactor) / 2 - minY * scaleFactor;
+
+    [shapes.s1, shapes.s2].forEach(s => {
+      const pts = s.vertices.map(v => `${v.x * scaleFactor + offsetX},${v.y * scaleFactor + offsetY}`).join(' ');
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('fill', '#ffe0b2');
+      poly.setAttribute('stroke', '#e65100');
+      poly.setAttribute('stroke-width', '3');
+      sSvgCompositeLayer.appendChild(poly);
+    });
+
+    // Render labels
+    if (comp.labels) {
+      comp.labels.forEach(lbl => {
+        const lx = lbl.x * scaleFactor + offsetX;
+        const ly = lbl.y * scaleFactor + offsetY;
+
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', lx);
+        txt.setAttribute('y', ly);
+        txt.setAttribute('fill', '#bf360c');
+        txt.setAttribute('font-size', '14');
+        txt.setAttribute('font-weight', 'bold');
+        txt.setAttribute('text-anchor', 'middle');
+        txt.textContent = lbl.text;
+        sSvgLabelsLayer.appendChild(txt);
+      });
+    }
+  }
+
+  function renderSplitCardsDeck(comp) {
+    if (!sCardsList) return;
+    sCardsList.innerHTML = '';
+
+    const cardOptions = [comp.cardTitle, comp.distractorCard];
+    // Shuffle deterministic or simple swap
+    if (currentSplitIndex % 2 === 1) {
+      cardOptions.reverse();
+    }
+
+    cardOptions.forEach(title => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'split-card-item';
+      cardEl.setAttribute('draggable', 'true');
+      cardEl.setAttribute('tabindex', '0');
+      cardEl.setAttribute('role', 'button');
+      cardEl.textContent = title;
+
+      // HTML5 drag and drop support
+      cardEl.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', title);
+      });
+
+      // Tap / Click fallback support for touch or click
+      cardEl.addEventListener('click', () => handleCardTapSelection(title, cardEl));
+      cardEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardTapSelection(title, cardEl);
+        }
+      });
+
+      sCardsList.appendChild(cardEl);
+    });
+  }
+
+  function setupSplitControls() {
+    if (!sTargetDropzone) return;
+
+    // Dragover & Drop handlers for HTML5 DND
+    sTargetDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      sTargetDropzone.classList.add('drag-over');
+    });
+
+    sTargetDropzone.addEventListener('dragleave', () => {
+      sTargetDropzone.classList.remove('drag-over');
+    });
+
+    sTargetDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      sTargetDropzone.classList.remove('drag-over');
+      const title = e.dataTransfer.getData('text/plain');
+      if (title) {
+        verifySplitCardMatch(title);
+      }
+    });
+
+    // Tap on dropzone target after selecting a card
+    sTargetDropzone.addEventListener('click', () => {
+      if (selectedSplitCardTitle && !splitCardMatched) {
+        verifySplitCardMatch(selectedSplitCardTitle);
+      }
+    });
+
+    if (sBtnRestart) {
+      sBtnRestart.addEventListener('click', () => {
+        splitPoints = 0;
+        sFinalScreen.classList.add('hidden');
+        sActiveContainer.classList.remove('hidden');
+        loadSplitComposite(0);
+      });
+    }
+  }
+
+  function handleCardTapSelection(title, cardEl) {
+    if (splitCardMatched) return;
+
+    document.querySelectorAll('.split-card-item').forEach(el => el.classList.remove('selected-tap'));
+    cardEl.classList.add('selected-tap');
+    selectedSplitCardTitle = title;
+
+    showToast('Card selected! Now tap the composite shape box to drop it.', sToastEl);
+  }
+
+  function verifySplitCardMatch(cardTitle) {
+    if (!window.SplitCore || splitCardMatched) return;
+
+    const currentComp = SplitCore.composites[currentSplitIndex];
+    const isMatch = SplitCore.checkCardMatch(currentComp.id, cardTitle);
+
+    if (isMatch) {
+      splitCardMatched = true;
+      splitPoints += 10;
+      if (sScoreVal) sScoreVal.textContent = `${splitPoints} pts`;
+
+      triggerSparkle();
+
+      if (sFeedbackMsg) {
+        sFeedbackMsg.textContent = '✨ Correct Split! Now calculate the total area.';
+        sFeedbackMsg.className = 's-feedback-box correct';
+        sFeedbackMsg.classList.remove('hidden');
+      }
+
+      // Display MCQ Area Options
+      displayAreaMCQ(currentComp.id);
+
+    } else {
+      // Shake animation and gentle feedback
+      if (sTargetDropzone) {
+        sTargetDropzone.style.animation = 'shake 0.4s ease';
+        setTimeout(() => sTargetDropzone.style.animation = '', 450);
+      }
+
+      if (sFeedbackMsg) {
+        sFeedbackMsg.textContent = '❌ Oops! Look closely at the two basic shapes.';
+        sFeedbackMsg.className = 's-feedback-box incorrect';
+        sFeedbackMsg.classList.remove('hidden');
+      }
+    }
+  }
+
+  function displayAreaMCQ(compositeId) {
+    if (!sAreaMcqBox || !sMcqOptions) return;
+
+    sMcqOptions.innerHTML = '';
+    const options = SplitCore.getAreaOptions(compositeId);
+
+    // Shuffle options
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 's-mcq-btn';
+      btn.textContent = `${opt} cm²`;
+      btn.addEventListener('click', () => checkAreaMCQAnswer(compositeId, opt, btn));
+      sMcqOptions.appendChild(btn);
+    });
+
+    sAreaMcqBox.classList.remove('hidden');
+  }
+
+  function checkAreaMCQAnswer(compositeId, chosenVal, btnEl) {
+    const comp = SplitCore.getComposite(compositeId);
+    const correctVal = comp.computedArea;
+
+    if (chosenVal === correctVal) {
+      splitPoints += 10;
+      if (sScoreVal) sScoreVal.textContent = `${splitPoints} pts`;
+
+      triggerConfetti();
+
+      if (sFeedbackMsg) {
+        sFeedbackMsg.textContent = `🎉 Spot on! Area = ${correctVal} cm² (+10 pts)!`;
+        sFeedbackMsg.className = 's-feedback-box correct';
+      }
+
+      // Disable MCQ buttons
+      document.querySelectorAll('.s-mcq-btn').forEach(b => b.disabled = true);
+
+      setTimeout(() => {
+        if (currentSplitIndex + 1 < SplitCore.composites.length) {
+          loadSplitComposite(currentSplitIndex + 1);
+        } else {
+          showSplitFinalScreen();
+        }
+      }, 1800);
+
+    } else {
+      if (btnEl) btnEl.style.opacity = '0.5';
+      if (sFeedbackMsg) {
+        sFeedbackMsg.textContent = '❌ Not quite. Remember: Area = Area 1 + Area 2!';
+        sFeedbackMsg.className = 's-feedback-box incorrect';
+      }
+    }
+  }
+
+  function showSplitFinalScreen() {
+    if (sActiveContainer) sActiveContainer.classList.add('hidden');
+    if (sFinalScreen) sFinalScreen.classList.remove('hidden');
+
+    let badge = '🥉 Splitter Bronze';
+    if (splitPoints >= 100) {
+      badge = '🥇 Master Splitter Gold';
+    } else if (splitPoints >= 70) {
+      badge = '🥈 Master Splitter Silver';
+    }
+
+    if (sFinalBadge) sFinalBadge.textContent = badge;
+    if (sFinalScoreText) sFinalScoreText.textContent = `Your final score: ${splitPoints} points!`;
+
+    try {
+      localStorage.setItem('paq_lab_split', splitPoints.toString());
+    } catch (e) {
+      // Storage unavailable
+    }
+
+    triggerConfetti();
+  }
+
+  // Start application on DOM ready
   document.addEventListener('DOMContentLoaded', init);
 })();

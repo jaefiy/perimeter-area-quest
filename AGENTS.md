@@ -20,3 +20,4 @@
      - Area of composite shapes (6.3.2): two shapes only, from: rectangle, square, equilateral triangle, isosceles triangle, right-angled triangle. Area of pentagon, hexagon, heptagon and octagon is NOT in Year 5 and must never be asked or calculated.
      - Shared sides may be horizontal, vertical or sloped, as long as the two edges match.
      - For an equilateral triangle, the height is given as data (side 4 cm: height 3.5 cm; side 8 cm: height 7 cm). Area = 1/2 x base x height using the given height.
+- CSS rule: never rewrite or remove existing rules in css/style.css or css/home.css. Put page-specific styles in their own file (css/lab.css, css/quiz.css, css/reallife.css), with every selector scoped under a body class (body.lab-page, body.quiz-page, body.reallife-page). The front page must look unchanged after any task.

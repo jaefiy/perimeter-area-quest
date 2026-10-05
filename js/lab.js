@@ -50,9 +50,11 @@
   const rectanglesGrid = document.getElementById('rectangles-grid');
   const trianglesGrid = document.getElementById('triangles-grid');
   const svgPlayArea = document.getElementById('play-area-svg');
-  const svgOverlayLayer = document.getElementById('svg-overlay-layer');
+  const svgOverlayLayer = document.getElementById('overlay-layer') || document.getElementById('svg-overlay-layer');
   const svgShapesLayer = document.getElementById('svg-shapes-layer');
   const svgControlsLayer = document.getElementById('svg-controls-layer');
+  const sharedPillBanner = document.getElementById('shared-pill-banner');
+  const sharedPillText = document.getElementById('shared-pill-text');
   const infoContent = document.getElementById('info-content');
   const btnShowShared = document.getElementById('btn-show-shared');
   const btnShowOuter = document.getElementById('btn-show-outer');
@@ -386,12 +388,42 @@
     }, 700);
   }
 
+  let prevJoinedState = false;
+
   function renderPlayArea() {
     svgOverlayLayer.innerHTML = '';
     svgShapesLayer.innerHTML = '';
     svgControlsLayer.innerHTML = '';
 
     const isJoined = placedShapes.length === 2 && MathCore.sharedLength(placedShapes[0].shape, placedShapes[1].shape) > 0;
+
+    // Automatically show shared side as soon as 2 shapes are joined (default ON)
+    if (isJoined && !prevJoinedState) {
+      showSharedSide = true;
+    } else if (!isJoined) {
+      showSharedSide = false;
+    }
+    prevJoinedState = isJoined;
+
+    // Update button text and state
+    if (btnShowShared) {
+      btnShowShared.disabled = !isJoined;
+      btnShowShared.textContent = showSharedSide ? '🔴 Hide shared side' : '🔴 Show shared side';
+      btnShowShared.classList.toggle('btn-primary', showSharedSide);
+    }
+
+    const sharedSegs = isJoined ? LabCore.getSharedSegments(placedShapes[0].shape, placedShapes[1].shape) : [];
+
+    // Show or hide top HTML pill banner
+    if (isJoined && showSharedSide && sharedSegs.length > 0) {
+      const totalShared = sharedSegs.reduce((sum, s) => sum + s.length, 0);
+      if (sharedPillText) {
+        sharedPillText.textContent = `Shared side (${MathCore.formatNumber(totalShared)} cm): NOT counted in perimeter`;
+      }
+      if (sharedPillBanner) sharedPillBanner.classList.remove('hidden');
+    } else {
+      if (sharedPillBanner) sharedPillBanner.classList.add('hidden');
+    }
 
     placedShapes.forEach(item => {
       const shape = item.shape;
@@ -403,20 +435,59 @@
       polygon.setAttribute('data-shape-id', item.id);
       svgShapesLayer.appendChild(polygon);
 
+      const centroid = getCentroid(shape.vertices);
+
       shape.edges.forEach(edge => {
+        // Check if edge is part of shared side
         const midX = (edge.p1.x + edge.p2.x) / 2;
         const midY = (edge.p1.y + edge.p2.y) / 2;
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', midX * SCALE);
-        text.setAttribute('y', midY * SCALE);
-        text.setAttribute('class', 'side-label-text');
-        text.textContent = `${MathCore.formatNumber(edge.length)} cm`;
-        svgShapesLayer.appendChild(text);
+        let isSharedEdge = false;
+        if (isJoined) {
+          for (const seg of sharedSegs) {
+            // Check if midpoint of edge lies on segment seg
+            const dist = pointToSegmentDistance({ x: midX, y: midY }, { x: seg.x1, y: seg.y1 }, { x: seg.x2, y: seg.y2 });
+            if (dist < 0.05) {
+              isSharedEdge = true;
+              break;
+            }
+          }
+        }
+
+        // Do not draw label on shared edge (the "shared" label covers it)
+        if (!isSharedEdge) {
+          // Offset 14px along outward normal
+          const dx = edge.p2.x - edge.p1.x;
+          const dy = edge.p2.y - edge.p1.y;
+          const len = Math.hypot(dx, dy);
+
+          if (len > 1e-6) {
+            // Candidate normal vectors (unit length)
+            let nx = -dy / len;
+            let ny = dx / len;
+
+            // Check direction relative to vector from centroid to midpoint
+            const vX = midX - centroid.x;
+            const vY = midY - centroid.y;
+            if (nx * vX + ny * vY < 0) {
+              nx = -nx;
+              ny = -ny;
+            }
+
+            const labelX = midX * SCALE + nx * 14;
+            const labelY = midY * SCALE + ny * 14;
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', labelX);
+            text.setAttribute('y', labelY);
+            text.setAttribute('class', 'side-label-text');
+            text.textContent = `${MathCore.formatNumber(edge.length)} cm`;
+            svgShapesLayer.appendChild(text);
+          }
+        }
       });
 
       if (shape.type === 'equilateral triangle' && (shape.side === 4 || shape.side === 8)) {
-        const centroid = getCentroid(shape.vertices);
         const hVal = shape.side === 4 ? 3.5 : 7;
         const hText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         hText.setAttribute('x', centroid.x * SCALE);
@@ -425,7 +496,6 @@
         hText.textContent = `h = ${hVal} cm`;
         svgShapesLayer.appendChild(hText);
       } else if (shape.type === 'isosceles triangle') {
-        const centroid = getCentroid(shape.vertices);
         const hVal = shape.side === 6 ? 4 : 3;
         const hText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         hText.setAttribute('x', centroid.x * SCALE);
@@ -435,7 +505,7 @@
         svgShapesLayer.appendChild(hText);
       }
 
-      renderShapeControls(item);
+      renderShapeControls(item, placedShapes);
     });
 
     if (isJoined) {
@@ -452,22 +522,72 @@
     }
   }
 
+  function pointToSegmentDistance(p, a, b) {
+    const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+    let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (a.x + t * (b.x - a.x)), p.y - (a.y + t * (b.y - a.y)));
+  }
+
   function getCentroid(vertices) {
     let sumX = 0, sumY = 0;
     vertices.forEach(v => { sumX += v.x; sumY += v.y; });
     return { x: sumX / vertices.length, y: sumY / vertices.length };
   }
 
-  function renderShapeControls(item) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity;
+  function renderShapeControls(item, allPlaced) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     item.shape.vertices.forEach(v => {
       if (v.x < minX) minX = v.x;
       if (v.y < minY) minY = v.y;
       if (v.x > maxX) maxX = v.x;
+      if (v.y > maxY) maxY = v.y;
     });
 
-    const cx = (maxX + 0.5) * SCALE;
-    const cy = (minY - 0.5) * SCALE;
+    const otherItem = allPlaced ? allPlaced.find(s => s.id !== item.id) : null;
+    const sharedSegs = otherItem ? LabCore.getSharedSegments(item.shape, otherItem.shape) : [];
+
+    // Candidate corner positions in SVG px coordinates: [cx, cy]
+    const candidates = [
+      { x: (maxX + 0.5) * SCALE, y: (minY - 0.5) * SCALE }, // Top-Right
+      { x: (minX - 2.5) * SCALE, y: (minY - 0.5) * SCALE }, // Top-Left
+      { x: (maxX + 0.5) * SCALE, y: (maxY + 0.5) * SCALE }, // Bottom-Right
+      { x: (minX - 2.5) * SCALE, y: (maxY + 0.5) * SCALE }  // Bottom-Left
+    ];
+
+    let chosenPos = candidates[0];
+
+    if (otherItem) {
+      for (const pos of candidates) {
+        // Check distance to other shape centroid and shared segments
+        const posCm = { x: pos.x / SCALE, y: pos.y / SCALE };
+        let conflict = false;
+
+        for (const seg of sharedSegs) {
+          if (pointToSegmentDistance(posCm, { x: seg.x1, y: seg.y1 }, { x: seg.x2, y: seg.y2 }) < 1.0) {
+            conflict = true;
+            break;
+          }
+        }
+
+        if (!conflict) {
+          // Check if posCm is inside or very close to other shape
+          const otherCentroid = getCentroid(otherItem.shape.vertices);
+          if (Math.hypot(posCm.x - otherCentroid.x, posCm.y - otherCentroid.y) < 1.5) {
+            conflict = true;
+          }
+        }
+
+        if (!conflict) {
+          chosenPos = pos;
+          break;
+        }
+      }
+    }
+
+    const cx = chosenPos.x;
+    const cy = chosenPos.y;
 
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('transform', `translate(${cx}, ${cy})`);
@@ -515,68 +635,58 @@
   }
 
   function renderSharedSideOverlay(A, B, targetLayer) {
-    const EPS = 1e-6;
-    for (const eA of A.edges) {
-      const ax = eA.p2.x - eA.p1.x;
-      const ay = eA.p2.y - eA.p1.y;
-      const lenA = Math.hypot(ax, ay);
-      if (lenA < EPS) continue;
-      const ux = ax / lenA;
-      const uy = ay / lenA;
-      const nx = -uy;
-      const ny = ux;
+    const segments = LabCore.getSharedSegments(A, B);
+    segments.forEach(seg => {
+      // 1. White underlay line (stroke white, width 12)
+      const underlay = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      underlay.setAttribute('x1', seg.x1 * SCALE);
+      underlay.setAttribute('y1', seg.y1 * SCALE);
+      underlay.setAttribute('x2', seg.x2 * SCALE);
+      underlay.setAttribute('y2', seg.y2 * SCALE);
+      underlay.setAttribute('stroke', '#ffffff');
+      underlay.setAttribute('stroke-width', '12');
+      underlay.setAttribute('stroke-linecap', 'round');
+      targetLayer.appendChild(underlay);
 
-      for (const eB of B.edges) {
-        const bx = eB.p2.x - eB.p1.x;
-        const by = eB.p2.y - eB.p1.y;
-        const lenB = Math.hypot(bx, by);
-        if (lenB < EPS) continue;
+      // 2. Red dashed line on top (stroke #d32f2f, width 7, dash 10 6, round caps, pulse animation)
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', seg.x1 * SCALE);
+      line.setAttribute('y1', seg.y1 * SCALE);
+      line.setAttribute('x2', seg.x2 * SCALE);
+      line.setAttribute('y2', seg.y2 * SCALE);
+      line.setAttribute('class', 'shared-edge-line shared-pulse');
+      targetLayer.appendChild(line);
 
-        const cross = Math.abs(ux * by - uy * bx);
-        if (cross > EPS) continue;
+      // 3. Small label "shared" with white rounded background rectangle centred on segment
+      const midX = ((seg.x1 + seg.x2) / 2) * SCALE;
+      const midY = ((seg.y1 + seg.y2) / 2) * SCALE;
 
-        const dist1 = Math.abs((eB.p1.x - eA.p1.x) * nx + (eB.p1.y - eA.p1.y) * ny);
-        const dist2 = Math.abs((eB.p2.x - eA.p1.x) * nx + (eB.p2.y - eA.p1.y) * ny);
-        if (dist1 > EPS || dist2 > EPS) continue;
+      const gLabel = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
-        const t1 = (eB.p1.x - eA.p1.x) * ux + (eB.p1.y - eA.p1.y) * uy;
-        const t2 = (eB.p2.x - eA.p1.x) * ux + (eB.p2.y - eA.p1.y) * uy;
+      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bgRect.setAttribute('x', midX - 30);
+      bgRect.setAttribute('y', midY - 11);
+      bgRect.setAttribute('width', '60');
+      bgRect.setAttribute('height', '22');
+      bgRect.setAttribute('rx', '5');
+      bgRect.setAttribute('fill', '#ffffff');
+      bgRect.setAttribute('stroke', '#d32f2f');
+      bgRect.setAttribute('stroke-width', '1.5');
+      gLabel.appendChild(bgRect);
 
-        const minB = Math.min(t1, t2);
-        const maxB = Math.max(t1, t2);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', midX);
+      text.setAttribute('y', midY);
+      text.setAttribute('fill', '#d32f2f');
+      text.setAttribute('font-size', '13');
+      text.setAttribute('font-weight', 'bold');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'central');
+      text.textContent = 'shared';
+      gLabel.appendChild(text);
 
-        const overlapStart = Math.max(0, minB);
-        const overlapEnd = Math.min(lenA, maxB);
-
-        const overlap = overlapEnd - overlapStart;
-        if (overlap > EPS) {
-          const sx1 = eA.p1.x + ux * overlapStart;
-          const sy1 = eA.p1.y + uy * overlapStart;
-          const sx2 = eA.p1.x + ux * overlapEnd;
-          const sy2 = eA.p1.y + uy * overlapEnd;
-
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', sx1 * SCALE);
-          line.setAttribute('y1', sy1 * SCALE);
-          line.setAttribute('x2', sx2 * SCALE);
-          line.setAttribute('y2', sy2 * SCALE);
-          line.setAttribute('class', 'shared-edge-line');
-          targetLayer.appendChild(line);
-
-          const midX = (sx1 + sx2) / 2;
-          const midY = (sy1 + sy2) / 2;
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', midX * SCALE);
-          text.setAttribute('y', (midY - 0.4) * SCALE);
-          text.setAttribute('fill', '#d32f2f');
-          text.setAttribute('font-size', '14');
-          text.setAttribute('font-weight', 'bold');
-          text.setAttribute('text-anchor', 'middle');
-          text.textContent = `Shared side (${MathCore.formatNumber(overlap)} cm): NOT counted in perimeter`;
-          targetLayer.appendChild(text);
-        }
-      }
-    }
+      targetLayer.appendChild(gLabel);
+    });
   }
 
   function renderOuterSidesOverlay(A, B, targetLayer) {

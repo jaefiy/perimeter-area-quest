@@ -64,7 +64,8 @@
       shapeData: {
         type: 'rect_square',
         s1: MathCore.createRectangle(7, 3, 0, 0),
-        s2: MathCore.createSquare(3, 7, 0),
+        s2: MathCore.createSquare(3, 0, 0),
+        layoutOpts: { edgeAIndex: 1, edgeBIndex: 0 },
         labels: [{ text: '7 cm', side: 'top' }, { text: '3 cm', side: 'right' }, { text: '3 cm', side: 'sq' }]
       },
       options: [
@@ -108,7 +109,8 @@
       shapeData: {
         type: 'square_triangle',
         s1: MathCore.createSquare(6, 0, 0),
-        s2: MathCore.regularPolygon(3, 6, 0, 0)
+        s2: MathCore.regularPolygon(3, 6, 0, 0),
+        layoutOpts: { edgeAIndex: 0, edgeBIndex: 0 }
       },
       options: [
         { value: 42, mistake: 'You counted every side of both shapes.' },
@@ -131,7 +133,8 @@
       shapeData: {
         type: 'octagon_square',
         s1: MathCore.regularPolygon(8, 3, 0, 0),
-        s2: MathCore.createSquare(3, 3, 0)
+        s2: MathCore.createSquare(3, 0, 0),
+        layoutOpts: { edgeAIndex: 1, edgeBIndex: 3 }
       },
       options: [
         { value: 36, mistake: 'You added both perimeters.' },
@@ -154,7 +157,8 @@
       shapeData: {
         type: 'rect_isosceles_perim',
         s1: MathCore.createRectangle(6, 3, 0, 0),
-        s2: MathCore.createIsoscelesTriangle(6, 4, 0, 3)
+        s2: MathCore.createIsoscelesTriangle(6, 4, 0, 0),
+        layoutOpts: { edgeAIndex: 0, edgeBIndex: 0 }
       },
       typedMistakes: {
         28: 'You counted the joined 6 cm side.'
@@ -174,7 +178,8 @@
       shapeData: {
         type: 'rect_isosceles_area',
         s1: MathCore.createRectangle(6, 3, 0, 0),
-        s2: MathCore.createIsoscelesTriangle(6, 4, 0, 3)
+        s2: MathCore.createIsoscelesTriangle(6, 4, 0, 0),
+        layoutOpts: { edgeAIndex: 0, edgeBIndex: 0, heightText: 'h = 4 cm', heightBaseIdx: 0 }
       },
       typedMistakes: {
         36: 'You forgot the 1/2 for the triangle.'
@@ -194,7 +199,8 @@
       shapeData: {
         type: 'square_eq_triangle_area',
         s1: MathCore.createSquare(4, 0, 0),
-        s2: MathCore.regularPolygon(3, 4, 0, 0)
+        s2: MathCore.regularPolygon(3, 4, 0, 0),
+        layoutOpts: { edgeAIndex: 0, edgeBIndex: 0, customHeightB: 3.5, heightText: 'h = 3.5 cm', heightBaseIdx: 0 }
       },
       options: [
         { value: 23, mistake: null },
@@ -217,7 +223,8 @@
       shapeData: {
         type: 'rect_right_triangle_area',
         s1: MathCore.createRectangle(8, 5, 0, 0),
-        s2: MathCore.createRightTriangle(6, 5, 8, 0)
+        s2: MathCore.createRightTriangle(6, 5, 0, 0),
+        layoutOpts: { edgeAIndex: 1, edgeBIndex: 1, showRightAngleB: true, noHypotenuse: true }
       },
       options: [
         { value: 70, mistake: 'You forgot the 1/2 for the triangle.' },

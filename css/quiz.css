@@ -284,6 +284,7 @@ body.quiz-page .diagram-svg {
   max-width: 480px;
   height: 250px;
   display: block;
+  overflow: visible;
 }
 
 /* SVG Diagram Elements */
@@ -296,8 +297,14 @@ body.quiz-page .diagram-polygon {
 
 body.quiz-page .diagram-shared-line {
   stroke: #757575;
-  stroke-width: 3;
+  stroke-width: 2.5;
   stroke-dasharray: 6,4;
+}
+
+body.quiz-page .diagram-height-line {
+  stroke: #e65100;
+  stroke-width: 2;
+  stroke-dasharray: 4,4;
 }
 
 body.quiz-page .diagram-side-text {
@@ -306,6 +313,11 @@ body.quiz-page .diagram-side-text {
   fill: #0d47a1;
   text-anchor: middle;
   dominant-baseline: central;
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 body.quiz-page .diagram-height-text {

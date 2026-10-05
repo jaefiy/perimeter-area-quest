@@ -153,166 +153,123 @@
     }
   }
 
-  // --- SVG Diagram Renderer ---
+  // --- SVG Diagram Renderer using DiagramCore ---
   function renderDiagram(q) {
     svgShapesLayer.innerHTML = '';
     svgLabelsLayer.innerHTML = '';
 
     const data = q.shapeData;
-    if (!data) return;
+    if (!data || !data.s1 || !data.s2) return;
 
-    let s1 = data.s1;
-    let s2 = data.s2;
+    const layout = DiagramCore.layoutComposite(data.s1, data.s2, data.layoutOpts || {});
+    const s1 = layout.shapeA;
+    const s2 = layout.shapeB;
+    const bounds = layout.bounds;
 
-    if (!s1 || !s2) return;
+    const shapeW = bounds.width || 1;
+    const shapeH = bounds.height || 1;
 
-    const allVertices = [...s1.vertices, ...s2.vertices];
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    // SVG ViewBox dimensions: 400x250 with at least 40px padding
+    const padding = 45;
+    const scaleFactor = Math.min((400 - padding * 2) / shapeW, (250 - padding * 2) / shapeH);
+    const offsetX = (400 - shapeW * scaleFactor) / 2 - bounds.minX * scaleFactor;
+    const offsetY = (250 - shapeH * scaleFactor) / 2 - bounds.minY * scaleFactor;
 
-    allVertices.forEach(v => {
-      if (v.x < minX) minX = v.x;
-      if (v.x > maxX) maxX = v.x;
-      if (v.y < minY) minY = v.y;
-      if (v.y > maxY) maxY = v.y;
-    });
-
-    const shapeW = maxX - minX || 1;
-    const shapeH = maxY - minY || 1;
-
-    // SVG ViewBox is 400x250. Fit shape with padding
-    const scaleFactor = Math.min(260 / shapeW, 170 / shapeH);
-    const offsetX = (400 - shapeW * scaleFactor) / 2 - minX * scaleFactor;
-    const offsetY = (250 - shapeH * scaleFactor) / 2 - minY * scaleFactor;
+    const toSvgX = x => x * scaleFactor + offsetX;
+    const toSvgY = y => y * scaleFactor + offsetY;
 
     // Draw Shape Polygons
     [s1, s2].forEach(shape => {
-      const pointsStr = shape.vertices
-        .map(v => `${v.x * scaleFactor + offsetX},${v.y * scaleFactor + offsetY}`)
-        .join(' ');
-
+      const pointsStr = shape.vertices.map(v => `${toSvgX(v.x)},${toSvgY(v.y)}`).join(' ');
       const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       polygon.setAttribute('points', pointsStr);
       polygon.setAttribute('class', 'diagram-polygon');
       svgShapesLayer.appendChild(polygon);
     });
 
-    // Draw Shared Edge (dashed line)
-    renderSharedDashedLine(s1, s2, scaleFactor, offsetX, offsetY);
+    // Draw Shared Edge (thin dashed grey line + ONE combined label "joined (X cm)")
+    const seg = layout.sharedSegment;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', toSvgX(seg.p1.x));
+    line.setAttribute('y1', toSvgY(seg.p1.y));
+    line.setAttribute('x2', toSvgX(seg.p2.x));
+    line.setAttribute('y2', toSvgY(seg.p2.y));
+    line.setAttribute('class', 'diagram-shared-line');
+    svgShapesLayer.appendChild(line);
 
-    // Draw Labels based on question type
-    renderQuestionLabels(q, scaleFactor, offsetX, offsetY);
-  }
+    // Combined shared label with white rounded background rectangle
+    const midSharedX = toSvgX((seg.p1.x + seg.p2.x) / 2);
+    const midSharedY = toSvgY((seg.p1.y + seg.p2.y) / 2);
 
-  function renderSharedDashedLine(s1, s2, scaleFactor, offsetX, offsetY) {
-    const EPS = 1e-4;
-    for (const e1 of s1.edges) {
-      for (const e2 of s2.edges) {
-        if (Math.abs(e1.length - e2.length) < 0.1) {
-          const mid1 = { x: (e1.p1.x + e1.p2.x) / 2, y: (e1.p1.y + e1.p2.y) / 2 };
-          const mid2 = { x: (e2.p1.x + e2.p2.x) / 2, y: (e2.p1.y + e2.p2.y) / 2 };
-          const dist = Math.hypot(mid1.x - mid2.x, mid1.y - mid2.y);
+    const gShared = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', midSharedX - 45);
+    bgRect.setAttribute('y', midSharedY - 11);
+    bgRect.setAttribute('width', '90');
+    bgRect.setAttribute('height', '22');
+    bgRect.setAttribute('rx', '5');
+    bgRect.setAttribute('fill', '#ffffff');
+    bgRect.setAttribute('stroke', '#757575');
+    bgRect.setAttribute('stroke-width', '1');
+    gShared.appendChild(bgRect);
 
-          if (dist < 0.2) {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', e1.p1.x * scaleFactor + offsetX);
-            line.setAttribute('y1', e1.p1.y * scaleFactor + offsetY);
-            line.setAttribute('x2', e1.p2.x * scaleFactor + offsetX);
-            line.setAttribute('y2', e1.p2.y * scaleFactor + offsetY);
-            line.setAttribute('class', 'diagram-shared-line');
-            svgOverlayLayerOrShapes(line);
+    const txtShared = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    txtShared.setAttribute('x', midSharedX);
+    txtShared.setAttribute('y', midSharedY);
+    txtShared.setAttribute('class', 'diagram-joined-text');
+    txtShared.textContent = seg.label;
+    gShared.appendChild(txtShared);
+    svgLabelsLayer.appendChild(gShared);
 
-            const midX = (mid1.x + mid2.x) / 2 * scaleFactor + offsetX;
-            const midY = (mid1.y + mid2.y) / 2 * scaleFactor + offsetY;
+    // Height Line & Label (inside triangle for Q7 and Q8)
+    if (layout.heightInfo) {
+      const hInfo = layout.heightInfo;
+      const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      hLine.setAttribute('x1', toSvgX(hInfo.line.p1.x));
+      hLine.setAttribute('y1', toSvgY(hInfo.line.p1.y));
+      hLine.setAttribute('x2', toSvgX(hInfo.line.p2.x));
+      hLine.setAttribute('y2', toSvgY(hInfo.line.p2.y));
+      hLine.setAttribute('class', 'diagram-height-line');
+      svgShapesLayer.appendChild(hLine);
 
-            const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            txt.setAttribute('x', midX);
-            txt.setAttribute('y', midY);
-            txt.setAttribute('class', 'diagram-joined-text');
-            txt.textContent = 'joined';
-            svgLabelsLayer.appendChild(txt);
-            return;
-          }
-        }
-      }
+      const hTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      hTxt.setAttribute('x', toSvgX(hInfo.labelPos.x));
+      hTxt.setAttribute('y', toSvgY(hInfo.labelPos.y));
+      hTxt.setAttribute('class', 'diagram-height-text');
+      hTxt.textContent = hInfo.text;
+      svgLabelsLayer.appendChild(hTxt);
     }
-  }
 
-  function svgOverlayLayerOrShapes(el) {
-    if (svgShapesLayer) svgShapesLayer.appendChild(el);
-  }
+    // Right-angle markers
+    layout.rightAngleMarkers.forEach(m => {
+      const vx = toSvgX(m.vertex.x);
+      const vy = toSvgY(m.vertex.y);
+      const size = 12;
+      const p1x = vx + m.v1.x * size;
+      const p1y = vy + m.v1.y * size;
+      const p2x = vx + (m.v1.x + m.v2.x) * size;
+      const p2y = vy + (m.v1.y + m.v2.y) * size;
+      const p3x = vx + m.v2.x * size;
+      const p3y = vy + m.v2.y * size;
 
-  function renderQuestionLabels(q, scaleFactor, offsetX, offsetY) {
-    const data = q.shapeData;
-    const s1 = data.s1;
-    const s2 = data.s2;
-
-    const addText = (x, y, text, cssClass = 'diagram-side-text') => {
-      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      txt.setAttribute('x', x * scaleFactor + offsetX);
-      txt.setAttribute('y', y * scaleFactor + offsetY);
-      txt.setAttribute('class', cssClass);
-      txt.textContent = text;
-      svgLabelsLayer.appendChild(txt);
-    };
-
-    if (q.id === 1) {
-      addText(2, -0.4, '4 cm');
-      addText(6, -0.4, '4 cm');
-      addText(-0.5, 2, '4 cm');
-      addText(8.5, 2, '4 cm');
-    } else if (q.id === 2) {
-      addText(3.5, -0.4, '7 cm');
-      addText(-0.5, 1.5, '3 cm');
-      addText(7 + 1.5, -0.4, '3 cm');
-      addText(10.5, 1.5, '3 cm');
-    } else if (q.id === 3) {
-      addText(2, -0.4, '4 cm');
-      addText(-0.8, 2, '4 cm');
-      addText(8.8, 2, '4 cm');
-    } else if (q.id === 4) {
-      addText(3, 6.4, '6 cm');
-      addText(-0.5, 3, '6 cm');
-      addText(6.5, 3, '6 cm');
-      addText(1.2, -1.8, '6 cm');
-      addText(4.8, -1.8, '6 cm');
-    } else if (q.id === 5) {
-      addText(1.5, 3.4, '3 cm');
-      addText(-0.8, 1.5, '3 cm');
-      addText(6.5, 1.5, '3 cm');
-    } else if (q.id === 6 || q.id === 7) {
-      addText(3, 3.4, '6 cm');
-      addText(-0.5, 1.5, '3 cm');
-      addText(6.5, 1.5, '3 cm');
-      addText(1.2, -0.8, '5 cm');
-      addText(4.8, -0.8, '5 cm');
-
-      if (q.id === 7) {
-        addText(3, 1.2, 'h = 4 cm', 'diagram-height-text');
-      }
-    } else if (q.id === 8) {
-      addText(2, 4.4, '4 cm');
-      addText(-0.5, 2, '4 cm');
-      addText(4.5, 2, '4 cm');
-      addText(2, 1.8, 'h = 3.5 cm', 'diagram-height-text');
-    } else if (q.id === 9) {
-      addText(4, 5.4, '8 cm');
-      addText(-0.5, 2.5, '5 cm');
-      addText(8 + 3, 5.4, '6 cm');
-      addText(8 - 0.5, 2.5, '5 cm');
-
-      // Right angle marker for right triangle
       const ra = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      const rx = 8 * scaleFactor + offsetX;
-      const ry = 5 * scaleFactor + offsetY;
-      ra.setAttribute('d', `M ${rx + 12} ${ry} L ${rx + 12} ${ry - 12} L ${rx} ${ry - 12}`);
+      ra.setAttribute('d', `M ${p1x} ${p1y} L ${p2x} ${p2y} L ${p3x} ${p3y}`);
       ra.setAttribute('class', 'diagram-right-angle');
       svgLabelsLayer.appendChild(ra);
-    } else if (q.id === 10) {
-      addText(2.5, -0.4, '5 cm');
-      addText(7.5, -0.4, '5 cm');
-      addText(-0.5, 2.5, '5 cm');
-      addText(10.5, 2.5, '5 cm');
-    }
+    });
+
+    // Outer Side Labels (14px outward normal offset with white halo)
+    layout.sideLabels.forEach(lbl => {
+      const lx = toSvgX(lbl.x) + lbl.nx * 14;
+      const ly = toSvgY(lbl.y) + lbl.ny * 14;
+
+      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txt.setAttribute('x', lx);
+      txt.setAttribute('y', ly);
+      txt.setAttribute('class', 'diagram-side-text');
+      txt.textContent = lbl.text;
+      svgLabelsLayer.appendChild(txt);
+    });
   }
 
   // --- Answers Renderer ---

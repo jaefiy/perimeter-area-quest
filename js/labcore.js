@@ -353,6 +353,67 @@
     return newState;
   }
 
+  /**
+   * Pure function to find all shared edge segments between shapeA and shapeB.
+   * Returns list of {x1, y1, x2, y2, length} for overlapping parallel edge segments.
+   */
+  function getSharedSegments(shapeA, shapeB) {
+    if (!shapeA || !shapeB || !shapeA.edges || !shapeB.edges) return [];
+    const segments = [];
+    const EPS = 1e-4;
+
+    for (const eA of shapeA.edges) {
+      const ax = eA.p2.x - eA.p1.x;
+      const ay = eA.p2.y - eA.p1.y;
+      const lenA = Math.hypot(ax, ay);
+      if (lenA < EPS) continue;
+      const ux = ax / lenA;
+      const uy = ay / lenA;
+      const nx = -uy;
+      const ny = ux;
+
+      for (const eB of shapeB.edges) {
+        const bx = eB.p2.x - eB.p1.x;
+        const by = eB.p2.y - eB.p1.y;
+        const lenB = Math.hypot(bx, by);
+        if (lenB < EPS) continue;
+
+        // Check if edges are parallel or anti-parallel (cross product near 0)
+        const cross = Math.abs(ux * by - uy * bx);
+        if (cross > EPS) continue;
+
+        // Check if eB lies on the same infinite line as eA (perpendicular distance < EPS)
+        const dist1 = Math.abs((eB.p1.x - eA.p1.x) * nx + (eB.p1.y - eA.p1.y) * ny);
+        const dist2 = Math.abs((eB.p2.x - eA.p1.x) * nx + (eB.p2.y - eA.p1.y) * ny);
+        if (dist1 > EPS || dist2 > EPS) continue;
+
+        // Project eB onto eA's line axis u
+        const t1 = (eB.p1.x - eA.p1.x) * ux + (eB.p1.y - eA.p1.y) * uy;
+        const t2 = (eB.p2.x - eA.p1.x) * ux + (eB.p2.y - eA.p1.y) * uy;
+
+        const minB = Math.min(t1, t2);
+        const maxB = Math.max(t1, t2);
+
+        // eA spans [0, lenA]
+        const overlapStart = Math.max(0, minB);
+        const overlapEnd = Math.min(lenA, maxB);
+
+        const overlap = overlapEnd - overlapStart;
+        if (overlap > EPS) {
+          const x1 = Math.round((eA.p1.x + ux * overlapStart) * 10000) / 10000;
+          const y1 = Math.round((eA.p1.y + uy * overlapStart) * 10000) / 10000;
+          const x2 = Math.round((eA.p1.x + ux * overlapEnd) * 10000) / 10000;
+          const y2 = Math.round((eA.p1.y + uy * overlapEnd) * 10000) / 10000;
+          const length = Math.round(overlap * 10000) / 10000;
+
+          segments.push({ x1, y1, x2, y2, length });
+        }
+      }
+    }
+
+    return segments;
+  }
+
   return {
     snapToGrid: snapToGrid,
     translateShape: translateShape,
@@ -361,6 +422,7 @@
     flipShape: flipShape,
     findEdgeSnap: findEdgeSnap,
     findFreePosition: findFreePosition,
-    addShapeToPlay: addShapeToPlay
+    addShapeToPlay: addShapeToPlay,
+    getSharedSegments: getSharedSegments
   };
 }));
